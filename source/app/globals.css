@@ -15232,3 +15232,121 @@ html.android-shell .ink-map {
   position: absolute !important;
   inset: 0;
 }
+
+/* Android: show full-body heroes (clip-path segments fail in WebView) */
+html.android-shell .combat-unit .fighter-body-art {
+  opacity: 1 !important;
+  z-index: 9 !important;
+  width: 150px !important;
+  height: 150px !important;
+  filter: none !important;
+  animation: none !important;
+  transform: translateX(-50%) !important;
+  background-color: transparent;
+}
+
+html.android-shell .fighter-articulated-body,
+html.android-shell .fighter-joint-map,
+html.android-shell .fighter-segment,
+html.android-shell .trait-icons-combat,
+html.android-shell .combat-role-crest,
+html.android-shell .combat-footing-badge,
+html.android-shell .combat-role-vfx,
+html.android-shell .fighter-banner,
+html.android-shell .fighter-rank-halo,
+html.android-shell .fighter-aura-disc,
+html.android-shell .fighter-ascension-ring,
+html.android-shell .fighter-star-particles,
+html.android-shell .fighter-mount {
+  display: none !important;
+}
+
+html.android-shell .combat-unit .fighter-rig,
+html.android-shell .combat-unit.side-enemy .fighter-rig {
+  width: 150px !important;
+  height: 156px !important;
+  animation: none !important;
+  filter: drop-shadow(0 8px 6px rgba(0, 0, 0, 0.75)) !important;
+}
+
+html.android-shell .combat-fighter {
+  inset: -64px -20px 4px !important;
+}
+
+html.android-shell .combat-unit {
+  min-width: 72px !important;
+  min-height: 110px !important;
+  overflow: visible !important;
+}
+
+html.android-shell .combat-unit-name {
+  font-size: 11px !important;
+  bottom: -2px;
+}
+
+html.android-shell .combat-unit-name small {
+  display: none !important;
+}
+
+html.android-shell .board-figurine .figurine-body {
+  width: 88% !important;
+  max-height: 92% !important;
+  opacity: 1 !important;
+  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.55)) !important;
+  mask-image: none !important;
+  -webkit-mask-image: none !important;
+  background-color: rgba(20, 18, 14, 0.35);
+}
+
+html.android-shell .trait-icons-figurine,
+html.android-shell .trait-icons-compact {
+  display: none !important;
+}
+
+html.android-shell .figurine-role {
+  width: 18px;
+  height: 18px;
+  font-size: 9px;
+}
+
+html.android-shell .live-combat {
+  position: absolute !important;
+  inset: 0 !important;
+  width: 1180px !important;
+  height: 720px !important;
+  padding: 0 !important;
+  display: grid !important;
+  place-items: stretch !important;
+}
+
+html.android-shell .live-combat-shell {
+  width: 1180px !important;
+  height: 720px !important;
+  max-width: none !important;
+  max-height: none !important;
+  min-height: 720px !important;
+}
+
+html.android-shell .live-combat-body {
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+html.android-shell .combat-feed {
+  width: 210px !important;
+}
+
+
+html.android-shell .android-stage {
+  position: fixed !important;
+  inset: 0 !important;
+  overflow: hidden !important;
+}
+
+html.android-shell .android-stage-inner {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  transform-origin: 0 0 !important;
+}
+
