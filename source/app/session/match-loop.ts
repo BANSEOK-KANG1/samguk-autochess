@@ -10,6 +10,11 @@ import { enemyFormationForSeed } from "../formation-config";
 import { rollItemShop } from "../item-data";
 import { boardToCombatInputs, rollShop } from "./game-session";
 import { buildAiBoardInputs } from "./ai-seat";
+import {
+  currentEncounterRule,
+  nextEncounterPosition,
+  nextEncounterRule,
+} from "./encounter-rules";
 import type { FightResult, MatchState, Pairing, PlayerState } from "./types";
 
 const alivePlayers = (match: MatchState) =>
@@ -219,8 +224,9 @@ const assignPlacements = (players: PlayerState[]): PlayerState[] => {
 };
 
 const refreshShops = (match: MatchState, players: PlayerState[]): PlayerState[] => {
-  const upcomingStage = match.stage === 5 ? 1 : match.stage + 1;
-  const upcomingRound = match.stage === 5 ? match.round + 1 : match.round;
+  const upcoming = nextEncounterPosition(match.round, match.stage);
+  const upcomingStage = upcoming.stage;
+  const upcomingRound = upcoming.round;
   return players.map((player, index) => {
     if (player.eliminated || player.locked) return player;
     if (isItemShopTurn(upcomingRound, upcomingStage)) {
@@ -240,6 +246,7 @@ const refreshShops = (match: MatchState, players: PlayerState[]): PlayerState[] 
 
 /** Advance AI boards each prep so rivals grow with the campaign. */
 export const growAiSeats = (match: MatchState): MatchState => {
+  const encounter = currentEncounterRule(match);
   const players = match.players.map((player, index) => {
     if (player.kind !== "ai" || player.eliminated) return player;
     const seed = match.seed + match.round * 70 + match.stage * 9 + index * 33;
@@ -256,7 +263,7 @@ export const growAiSeats = (match: MatchState): MatchState => {
     return {
       ...player,
       board,
-      level: Math.min(9, player.level + (match.stage === 1 ? 1 : 0)),
+      level: Math.max(player.level, encounter.targetLevel),
       gold: player.gold + 2,
     };
   });
@@ -264,17 +271,73 @@ export const growAiSeats = (match: MatchState): MatchState => {
 };
 
 export const beginCombatRound = (match: MatchState): MatchState => {
+  const encounter = currentEncounterRule(match);
   const themes = BATTLEFIELD_THEMES.filter((item) => item.id !== match.theme);
   const themeRoll =
     (match.seed + match.round * 17 + match.stage * 5) % themes.length;
   const theme = themes[themeRoll]?.id ?? match.theme;
-  const grown = growAiSeats({ ...match, theme });
+  const grown =
+    encounter.kind === "rival"
+      ? growAiSeats({ ...match, theme })
+      : { ...match, theme };
   return {
     ...grown,
     theme,
-    pairings: buildPairings(grown),
+    pairings: encounter.kind === "farm" ? [] : buildPairings(grown),
     phase: "combat",
-    notice: `${match.round}-${match.stage} 교전 개시 · ${theme}`,
+    notice:
+      encounter.kind === "farm"
+        ? `${encounter.label} · 보상 금화 ${encounter.goldReward} · ${theme}`
+        : `${match.round}-${match.stage} 조합전 개시 · ${theme}`,
+  };
+};
+
+export const settleFarmRound = (
+  match: MatchState,
+  humanWinner: CombatWinner,
+): MatchState => {
+  const encounter = currentEncounterRule(match);
+  if (encounter.kind !== "farm") return match;
+
+  const itemCandidates = rollItemShop(
+    match.seed + encounter.number * 97,
+  ).filter(Boolean) as string[];
+  const drops =
+    humanWinner === "ally"
+      ? itemCandidates.slice(0, encounter.itemDrops)
+      : [];
+  const payout =
+    humanWinner === "ally"
+      ? encounter.goldReward
+      : Math.max(2, Math.floor(encounter.goldReward / 2));
+
+  const players = match.players.map((player) => ({
+    ...player,
+    gold: player.gold + payout,
+    level: Math.max(player.level, encounter.targetLevel),
+    xp: 0,
+    itemBag:
+      player.id === match.humanId ? [...player.itemBag, ...drops] : player.itemBag,
+  }));
+  const next = nextEncounterPosition(match.round, match.stage);
+  const advancedBase: MatchState = {
+    ...match,
+    players,
+    round: next.round,
+    stage: next.stage,
+    phase: "prep",
+    lastResults: [],
+    notice:
+      humanWinner === "ally"
+        ? `${encounter.label} 완료 · 금화 ${payout}${drops.length ? ` · 아이템 ${drops.length}개` : ""} · 레벨 ${encounter.targetLevel}`
+        : `${encounter.label} 재정비 · 금화 ${payout} · 레벨 ${encounter.targetLevel}`,
+  };
+  const refreshedPlayers = refreshShops(match, players);
+  const nextState = { ...advancedBase, players: refreshedPlayers };
+  return {
+    ...nextState,
+    pairings:
+      nextEncounterRule(match).kind === "farm" ? [] : buildPairings(nextState),
   };
 };
 
@@ -315,8 +378,9 @@ export const settleMatchRound = (
   const survivors = players.filter((player) => !player.eliminated);
   const finished = human.eliminated || survivors.length <= 1;
 
-  const nextRound = match.stage === 5 ? match.round + 1 : match.round;
-  const nextStage = match.stage === 5 ? 1 : match.stage + 1;
+  const next = nextEncounterPosition(match.round, match.stage);
+  const nextRound = next.round;
+  const nextStage = next.stage;
   const advanced: MatchState = {
     ...match,
     players: finished ? players : refreshShops(match, players),
@@ -327,12 +391,14 @@ export const settleMatchRound = (
     rankPoints,
     pairings: finished
       ? match.pairings
-      : buildPairings({
-          ...match,
-          players,
-          round: nextRound,
-          stage: nextStage,
-        }),
+      : nextEncounterRule(match).kind === "farm"
+        ? []
+        : buildPairings({
+            ...match,
+            players,
+            round: nextRound,
+            stage: nextStage,
+          }),
     notice: finished
       ? human.eliminated
         ? `패배 · ${human.placement ?? survivors.length + 1}위`

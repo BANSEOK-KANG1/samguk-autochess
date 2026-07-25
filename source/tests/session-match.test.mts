@@ -3,7 +3,7 @@ import { describe, it } from "node:test";
 import {
   createBattleState,
   simulateBattleToEnd,
-} from "../app/combat-engine.ts";
+} from "../app/combat-engine";
 import {
   beginCombatRound,
   boardToCombatInputs,
@@ -11,17 +11,19 @@ import {
   buildPairings,
   createMatchSnapshot,
   createMatchState,
+  encounterRuleFor,
   humanPlayer,
   mergeRoster,
   opponentForHuman,
   packGhostCode,
   parseMatchSnapshot,
   settleMatchRound,
+  settleFarmRound,
   snapshotFingerprint,
   snapshotFromPlayer,
   unpackGhostCode,
   validateMatchSnapshot,
-} from "../app/session/index.ts";
+} from "../app/session/index";
 
 describe("session match foundation", () => {
   it("creates 2~4 seat matches with human + AI", () => {
@@ -30,6 +32,47 @@ describe("session match foundation", () => {
     assert.equal(match.players.filter((p) => p.kind === "ai").length, 3);
     assert.ok(humanPlayer(match).board.some(Boolean));
     assert.ok(buildPairings(match).length >= 2);
+  });
+
+  it("uses three opening farm rounds, then 3 rival / 1 farm cadence", () => {
+    assert.deepEqual(
+      Array.from({ length: 11 }, (_, index) =>
+        encounterRuleFor(
+          Math.floor(index / 5) + 1,
+          (index % 5) + 1,
+        ).kind,
+      ),
+      [
+        "farm",
+        "farm",
+        "farm",
+        "rival",
+        "rival",
+        "rival",
+        "farm",
+        "rival",
+        "rival",
+        "rival",
+        "farm",
+      ],
+    );
+  });
+
+  it("starts small and reaches level 4 after the third farming round", () => {
+    let match = createMatchState({ aiCount: 1, seed: 2026 });
+    assert.equal(humanPlayer(match).level, 1);
+    assert.equal(humanPlayer(match).board.filter(Boolean).length, 1);
+
+    for (let encounter = 1; encounter <= 3; encounter += 1) {
+      match = beginCombatRound(match);
+      match = settleFarmRound(match, "ally");
+      assert.equal(humanPlayer(match).level, encounter + 1);
+    }
+
+    assert.equal(humanPlayer(match).level, 4);
+    assert.equal(encounterRuleFor(match.round, match.stage).kind, "rival");
+    assert.ok(humanPlayer(match).gold > 10);
+    assert.ok(humanPlayer(match).itemBag.length >= 2);
   });
 
   it("merges three copies into a higher star", () => {
@@ -58,6 +101,7 @@ describe("session match foundation", () => {
       aiCount: 1,
       seed: 777,
     });
+    match = { ...match, stage: 4 };
     match = beginCombatRound(match);
     const foe = opponentForHuman(match);
     assert.ok(foe, "2-seat match should always pair human vs AI");

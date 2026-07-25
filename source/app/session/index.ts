@@ -4,3 +4,4 @@ export * from "./match-loop";
 export * from "./ai-seat";
 export * from "./save-game";
 export * from "./match-snapshot";
+export * from "./encounter-rules";

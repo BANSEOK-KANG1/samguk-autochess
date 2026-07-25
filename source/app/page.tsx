@@ -74,11 +74,13 @@ import {
   beginCombatRound,
   boardToCombatInputs,
   buildAiBoardInputs,
+  buildBanditInputs,
   clearMatchSave,
   createInitialBench,
   createInitialBoard,
   createMatchSnapshot,
   createMatchState,
+  currentEncounterRule,
   hasMatchSave,
   humanPlayer,
   loadMatch,
@@ -87,6 +89,7 @@ import {
   practiceEnemyMeta,
   rollShop,
   saveMatch,
+  settleFarmRound,
   settleMatchRound,
   snapshotFromPlayer,
   updateHuman,
@@ -407,17 +410,17 @@ export default function Home() {
   const [aiCount, setAiCount] = useState<AiRivalCount>(2);
   const [board, setBoard] = useState<(Unit | null)[]>(() => createInitialBoard(1));
   const [bench, setBench] = useState<(Unit | null)[]>(() => createInitialBench(1));
-  const [shop, setShop] = useState<(string | null)[]>(() => rollShop(6, 17));
+  const [shop, setShop] = useState<(string | null)[]>(() => rollShop(1, 17));
   const [shopKind, setShopKind] = useState<ShopKind>("heroes");
   const [itemShop, setItemShop] = useState<(string | null)[]>(() =>
     rollItemShop(42),
   );
   const [itemBag, setItemBag] = useState<string[]>([]);
   const [selection, setSelection] = useState<Selection>(null);
-  const [gold, setGold] = useState(27);
+  const [gold, setGold] = useState(10);
   const [health, setHealth] = useState(100);
-  const [level, setLevel] = useState(6);
-  const [xp, setXp] = useState(18);
+  const [level, setLevel] = useState(1);
+  const [xp, setXp] = useState(0);
   const [round, setRound] = useState(1);
   const [stage, setStage] = useState(1);
   const [streak, setStreak] = useState(0);
@@ -449,6 +452,7 @@ export default function Home() {
   const combat = Boolean(battle);
   const scout = opponentForHuman(match);
   const campaignMode = mode === "single" || mode === "versus";
+  const encounter = currentEncounterRule(match);
 
   const applyHumanSnapshot = (next: MatchState) => {
     const human = humanPlayer(next);
@@ -577,7 +581,10 @@ export default function Home() {
       resultTimer.current = window.setTimeout(() => {
         if (campaignMode) {
           const synced = syncHumanIntoMatch();
-          const settled = settleMatchRound(synced, winner);
+          const settled =
+            currentEncounterRule(synced).kind === "farm"
+              ? settleFarmRound(synced, winner)
+              : settleMatchRound(synced, winner);
           applyHumanSnapshot(settled);
           saveMatch(settled);
           setSavedAvailable(true);
@@ -933,8 +940,9 @@ export default function Home() {
     if (campaignMode) {
       const synced = syncHumanIntoMatch();
       const combatMatch = beginCombatRound(synced);
+      const combatEncounter = currentEncounterRule(combatMatch);
       const foe = opponentForHuman(combatMatch);
-      if (!foe) {
+      if (combatEncounter.kind === "rival" && !foe) {
         const settled = settleMatchRound(combatMatch, "draw");
         applyHumanSnapshot(settled);
         saveMatch(settled);
@@ -945,9 +953,11 @@ export default function Home() {
       const seed =
         combatMatch.seed + combatMatch.round * 137 + combatMatch.stage * 31;
       const enemyUnits =
-        foe.kind === "ai"
+        combatEncounter.kind === "farm"
+          ? buildBanditInputs(combatMatch, combatEncounter)
+          : foe?.kind === "ai"
           ? buildAiBoardInputs(foe, combatMatch, seed + 11)
-          : boardToCombatInputs(foe.board);
+          : boardToCombatInputs(foe!.board);
       setMatch(combatMatch);
       setTheme(combatMatch.theme);
       setRound(combatMatch.round);
@@ -962,17 +972,29 @@ export default function Home() {
           theme: combatMatch.theme,
           seed,
           allyTactic: tactic,
-          enemyTactic: foe.tactic ?? enemyTacticForSeed(seed),
+          enemyTactic:
+            combatEncounter.kind === "farm"
+              ? "assault"
+              : foe?.tactic ?? enemyTacticForSeed(seed),
           allyFormation: formation,
-          enemyFormation: foe.formation ?? enemyFormationForSeed(seed),
-          enemyScale: 1,
+          enemyFormation:
+            combatEncounter.kind === "farm"
+              ? "bongsi"
+              : foe?.formation ?? enemyFormationForSeed(seed),
+          enemyScale: combatEncounter.enemyScale,
         }),
       );
-      createMatchSnapshot(combatMatch, [
-        snapshotFromPlayer(humanPlayer(combatMatch), allies),
-        snapshotFromPlayer(foe, enemyUnits),
-      ]);
-      setNotice(`${foe.name}과 교전 · 다른 AI 대진은 자동 처리됩니다`);
+      if (foe) {
+        createMatchSnapshot(combatMatch, [
+          snapshotFromPlayer(humanPlayer(combatMatch), allies),
+          snapshotFromPlayer(foe, enemyUnits),
+        ]);
+      }
+      setNotice(
+        combatEncounter.kind === "farm"
+          ? `${combatEncounter.label} · 산적 ${enemyUnits.length}명 · 금화 ${combatEncounter.goldReward}${combatEncounter.itemDrops ? ` · 아이템 ${combatEncounter.itemDrops}개` : ""}`
+          : `${foe!.name}과 조합전 · 다른 AI 대진은 자동 처리됩니다`,
+      );
       return;
     }
 
@@ -1035,7 +1057,7 @@ export default function Home() {
           <button className="intro-link" onClick={() => { setIntroOpen(false); setModeOpen(true); }}>
             난이도 · AI 수 · 진법 설정
           </button>
-          <span className="intro-version">PRE-ALPHA v0.2.0 · 로컬 저장</span>
+          <span className="intro-version">PRE-ALPHA v0.2.1 · 파밍/조합전 순환</span>
         </div>
       )}
       <div className="ink-map" aria-hidden="true" />
@@ -1106,7 +1128,9 @@ export default function Home() {
 
           <section className="battlefield panel">
             <div className="battlefield-top">
-              <span className="phase">{round}-{stage} · 준비 단계</span>
+              <span className={`phase encounter-phase encounter-${encounter.kind}`}>
+                {encounter.number}전 · {encounter.label}
+              </span>
               <div className="terrain-title" style={{ "--terrain-accent": currentTheme.accent } as React.CSSProperties}>
                 <span>{theme}</span>
                 <h1>군웅의 전장<small>{theme} · {currentTheme.subtitle}</small></h1>
@@ -1220,6 +1244,19 @@ export default function Home() {
             <div className="panel-heading"><span>{selectedHero ? "장수 상세" : "전장 상황"}</span><small className="ready">{campaignMode ? `${match.players.length}석` : "연습"}</small></div>
             {campaignMode && (
               <div className="match-standings">
+                <div className={`encounter-brief encounter-${encounter.kind}`}>
+                  <b>{encounter.kind === "farm" ? "파밍판" : "조합전"}</b>
+                  <strong>{encounter.label}</strong>
+                  <small>{encounter.subtitle}</small>
+                  {encounter.kind === "farm" && (
+                    <em>
+                      보상 금화 {encounter.goldReward}
+                      {encounter.itemDrops
+                        ? ` · 아이템 ${encounter.itemDrops}개`
+                        : " · 기본 장수 훈련"}
+                    </em>
+                  )}
+                </div>
                 <span className="match-standings-title">대진 · 체력</span>
                 {[...match.players]
                   .sort((a, b) => Number(a.eliminated) - Number(b.eliminated) || b.health - a.health)
@@ -1241,7 +1278,7 @@ export default function Home() {
                       </div>
                     );
                   })}
-                {scout && (
+                {encounter.kind === "rival" && scout && (
                   <p className="match-scout">다음 상대 · {scout.name} · {FORMATIONS[scout.formation].label}</p>
                 )}
               </div>
@@ -1416,7 +1453,14 @@ export default function Home() {
             )}
           </div>
           <div className="battle-action">
-            <span>{round}-{stage} · {FORMATIONS[formation].label} {formationTier}단계<br />{campaignMode ? `캠페인 · AI ${aiCount} · 보상 ×${DIFFICULTIES[difficulty].rewardMultiplier}` : "연습 전투 · 저장 없음"}</span>
+            <span>
+              {encounter.number}전 · {encounter.label}<br />
+              {campaignMode
+                ? encounter.kind === "farm"
+                  ? `산적 파밍 · 목표 레벨 ${encounter.targetLevel} · 금화 ${encounter.goldReward}`
+                  : `본격 조합전 · AI ${aiCount} · 보상 ×${DIFFICULTIES[difficulty].rewardMultiplier}`
+                : "연습 전투 · 저장 없음"}
+            </span>
             <button onClick={startBattle} disabled={combat || (campaignMode && match.phase === "finished")}><small>자동 전투</small>전투 시작</button>
             <p>이자 +{Math.min(5, Math.floor(gold / 10))} · 연승 보너스 +{Math.min(3, Math.floor(Math.max(0, streak) / 2))}</p>
           </div>
@@ -1427,8 +1471,12 @@ export default function Home() {
         <CombatStage
           state={battle}
           theme={battle.theme}
-          opponent={scout?.name ?? (mode === "practice" ? "연습 상대" : "AI 라이벌")}
-          battleLabel={`${round}-${stage} ${campaignMode ? "캠페인" : "연습"} 교전`}
+          opponent={
+            encounter.kind === "farm"
+              ? "산적·황건 잔당"
+              : scout?.name ?? (mode === "practice" ? "연습 상대" : "AI 라이벌")
+          }
+          battleLabel={`${encounter.number}전 · ${encounter.label}`}
           speed={speed}
           result={battleResult}
           onToggleSpeed={() => setSpeed((value) => value === 1 ? 2 : 1)}

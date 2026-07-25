@@ -2,8 +2,6 @@ import {
   HEROES,
   HERO_BY_ID,
   SHOP_ODDS,
-  STARTING_BENCH,
-  STARTING_BOARD,
   type BattlefieldTheme,
 } from "../game-data";
 import { DIFFICULTIES, type DifficultyId, type GameMode, type TacticId } from "../combat-config";
@@ -17,12 +15,16 @@ import {
   type Unit,
 } from "./types";
 import { buildPairings } from "./match-loop";
+import { encounterRuleFor } from "./encounter-rules";
 
 const AI_PERSONAS = [
   { id: "wei-forge", name: "위나라 대장군", persona: "wei" },
   { id: "shu-oath", name: "촉한 의형제", persona: "shu" },
   { id: "wu-tide", name: "오나라 수군", persona: "wu" },
 ] as const;
+
+const STARTER_BOARD = ["yue-jin"] as const;
+const STARTER_BENCH = ["yu-jin", "cao-zhen"] as const;
 
 const seededUnit = (heroId: string, index: number, seed: number): Unit => ({
   uid: `${heroId}-${index}-${seed}`,
@@ -33,16 +35,16 @@ const seededUnit = (heroId: string, index: number, seed: number): Unit => ({
 
 export const createInitialBoard = (seed = 1): (Unit | null)[] => {
   const board: (Unit | null)[] = Array.from({ length: BOARD_SIZE }, () => null);
-  STARTING_BOARD.forEach((heroId, index) => {
-    board[BOARD_POSITIONS[index]] = seededUnit(heroId, index, seed);
+  STARTER_BOARD.forEach((heroId, index) => {
+    board[BOARD_POSITIONS[index + 2]] = seededUnit(heroId, index, seed);
   });
   return board;
 };
 
 export const createInitialBench = (seed = 1): (Unit | null)[] =>
   Array.from({ length: 9 }, (_, index) =>
-    STARTING_BENCH[index]
-      ? seededUnit(STARTING_BENCH[index], index + 20, seed)
+    STARTER_BENCH[index]
+      ? seededUnit(STARTER_BENCH[index], index + 20, seed)
       : null,
   );
 
@@ -141,13 +143,13 @@ const emptyPlayer = ({
   name,
   kind,
   health: 100,
-  gold: kind === "human" ? 27 : 20 + (seed % 8),
-  level: kind === "human" ? 6 : 4 + (seed % 3),
-  xp: kind === "human" ? 18 : seed % 12,
+  gold: kind === "human" ? 10 : 8 + (seed % 4),
+  level: 1,
+  xp: 0,
   streak: 0,
   board: kind === "human" ? createInitialBoard(seed) : Array.from({ length: BOARD_SIZE }, () => null),
   bench: kind === "human" ? createInitialBench(seed) : Array.from({ length: 9 }, () => null),
-  shop: rollShop(6, seed + 17),
+  shop: rollShop(1, seed + 17),
   shopKind: "heroes",
   itemShop: rollItemShop(seed + 42),
   itemBag: [],
@@ -212,7 +214,7 @@ export const createMatchState = ({
   }
 
   const match: MatchState = {
-    version: 1,
+    version: 2,
     mode,
     difficulty,
     aiCount,
@@ -230,7 +232,10 @@ export const createMatchState = ({
   };
   return {
     ...match,
-    pairings: buildPairings(match),
+    pairings:
+      encounterRuleFor(match.round, match.stage).kind === "farm"
+        ? []
+        : buildPairings(match),
   };
 };
 

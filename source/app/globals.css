@@ -15790,6 +15790,65 @@ html.android-shell .motion-system-v21 .combat-arena.ultimate-active .combat-unit
   letter-spacing: 0.12em;
 }
 
+.encounter-brief {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 7px;
+  margin-bottom: 4px;
+  padding: 7px;
+  border: 1px solid rgba(197, 162, 92, 0.22);
+  background: rgba(15, 17, 12, 0.78);
+}
+
+.encounter-brief > b {
+  grid-row: 1 / 4;
+  align-self: stretch;
+  display: grid;
+  place-items: center;
+  min-width: 39px;
+  padding: 3px;
+  border: 1px solid rgba(197, 162, 92, 0.3);
+  color: #e7d19d;
+  font-size: 10px;
+}
+
+.encounter-brief > strong {
+  color: #f0e1bd;
+  font-size: 12px;
+}
+
+.encounter-brief > small {
+  color: #9d927c;
+  font-size: 8px;
+  line-height: 1.3;
+}
+
+.encounter-brief > em {
+  color: #d7b86f;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.encounter-brief.encounter-farm {
+  border-color: rgba(107, 145, 83, 0.45);
+  background:
+    linear-gradient(90deg, rgba(65, 91, 48, 0.25), transparent),
+    rgba(12, 16, 10, 0.82);
+}
+
+.encounter-brief.encounter-farm > b {
+  border-color: rgba(123, 166, 94, 0.55);
+  color: #bcd99b;
+}
+
+.encounter-phase.encounter-farm {
+  color: #b7d394 !important;
+}
+
+.encounter-phase.encounter-rival {
+  color: #d9b578 !important;
+}
+
 .match-standing {
   display: grid;
   grid-template-columns: 1fr auto;

@@ -27,7 +27,7 @@ export const GAME_MODES: Record<
     hanja: "캠페인",
     eyebrow: "SOLO 2~4 SEATS",
     description:
-      "당신 + AI 1~3명. 대진·체력·탈락·순위가 있는 한 판 오토체스입니다. 오프라인으로 완주합니다.",
+      "1~3전은 산적 파밍, 4전부터 조합전. 이후 조합전 3회마다 파밍판이 돌아오는 오프라인 오토체스입니다.",
     estimatedMinutes: "15~25분",
   },
   versus: {
