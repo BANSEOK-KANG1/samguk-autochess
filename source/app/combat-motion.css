@@ -1,0 +1,1791 @@
+/* ==========================================================================
+   V21 combat motion system
+   One authoritative layer for articulated bodies, star scale and ultimates.
+   ========================================================================== */
+
+.motion-system-v21 {
+  --cinematic-duration: 1220ms;
+}
+
+.motion-system-v21 .combat-arena {
+  isolation: isolate;
+  contain: layout paint;
+}
+
+.motion-system-v21 .combat-unit {
+  min-width: 46px;
+  min-height: 78px;
+  transition:
+    left 260ms cubic-bezier(0.2, 0.72, 0.28, 1),
+    top 260ms cubic-bezier(0.2, 0.72, 0.28, 1),
+    opacity 160ms ease;
+}
+
+.motion-system-v21 .combat-fighter {
+  inset: -34px -8px 8px;
+  translate: 0 0;
+  transform-style: preserve-3d;
+  filter: drop-shadow(0 10px 7px rgba(0, 0, 0, 0.34));
+}
+
+.motion-system-v21 .fighter-rig,
+.motion-system-v21 .side-enemy .fighter-rig {
+  left: 50%;
+  bottom: 2px;
+  display: block;
+  width: 124px;
+  height: 124px;
+  animation: none;
+  opacity: 1;
+  filter:
+    drop-shadow(0 1px 1px rgba(255, 239, 199, 0.1))
+    drop-shadow(0 8px 5px rgba(0, 0, 0, 0.76));
+  transform:
+    translateX(-50%)
+    scaleX(var(--fighter-facing))
+    scale(var(--fighter-render-scale));
+  transform-origin: 50% 94%;
+  transform-style: preserve-3d;
+  will-change: transform, filter, opacity;
+}
+
+.motion-system-v21 .fighter-rig::after {
+  display: none;
+}
+
+.motion-system-v21 .fighter-body-art,
+.motion-system-v21 .fighter-afterimage,
+.motion-system-v21 .fighter-segment {
+  left: 50%;
+  bottom: 0;
+  display: block;
+  width: 124px;
+  height: 124px;
+  background-repeat: no-repeat;
+  image-rendering: auto;
+  transform-origin: 50% 90%;
+}
+
+.motion-system-v21 .fighter-body-art {
+  z-index: 3;
+  opacity: 0.2;
+  filter: brightness(0.72) saturate(0.84);
+  animation: v21-seam-breathe 1.9s ease-in-out infinite;
+  transform: translateX(-50%);
+}
+
+.motion-system-v21 .fighter-articulated-body {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: block;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.motion-system-v21 .fighter-segment {
+  position: absolute;
+  pointer-events: none;
+  will-change: transform, filter, opacity;
+}
+
+.motion-system-v21 .segment-legs {
+  z-index: 2;
+  clip-path: polygon(7% 49%, 93% 49%, 100% 100%, 0 100%);
+  transform-origin: 50% 57%;
+  animation: v21-idle-legs 1.9s ease-in-out infinite;
+}
+
+.motion-system-v21 .segment-torso {
+  z-index: 4;
+  clip-path: polygon(11% 17%, 89% 17%, 94% 72%, 6% 72%);
+  transform-origin: 50% 64%;
+  animation: v21-idle-torso 1.9s ease-in-out infinite;
+}
+
+.motion-system-v21 .segment-head {
+  z-index: 7;
+  clip-path: polygon(22% 0, 78% 0, 82% 37%, 18% 37%);
+  transform-origin: 50% 31%;
+  animation: v21-idle-head 2.35s ease-in-out infinite;
+}
+
+.motion-system-v21 .segment-arm-back {
+  z-index: 3;
+  clip-path: polygon(0 12%, 52% 16%, 54% 75%, 0 88%);
+  transform-origin: 37% 29%;
+  animation: v21-idle-arm-back 1.9s ease-in-out infinite;
+}
+
+.motion-system-v21 .segment-arm-weapon {
+  z-index: 6;
+  clip-path: polygon(48% 15%, 100% 8%, 100% 89%, 46% 75%);
+  transform-origin: 63% 29%;
+  animation: v21-idle-arm-front 1.9s ease-in-out infinite;
+}
+
+.motion-system-v21 .fighter-afterimage {
+  z-index: 2;
+  opacity: 0;
+  filter:
+    saturate(1.35)
+    drop-shadow(0 0 8px var(--signature));
+  transform:
+    translateX(-50%)
+    scaleX(var(--fighter-facing));
+}
+
+.motion-system-v21 .fighter-joint-map {
+  display: none;
+}
+
+.motion-system-v21 .fighter-depth-shadow {
+  bottom: -5px;
+  width: 49px;
+  height: 13px;
+  opacity: 0.82;
+  filter: blur(3px);
+  transition: width 180ms ease, height 180ms ease;
+}
+
+.motion-system-v21 .fighter-ground {
+  bottom: -2px;
+  width: 46px;
+  height: 12px;
+  transition: width 180ms ease, height 180ms ease;
+}
+
+.motion-system-v21 .fighter-body-rim {
+  left: 50%;
+  bottom: 8px;
+  width: 59px;
+  height: 77px;
+  opacity: 0.38;
+  transform: translateX(-50%);
+}
+
+/* Star size is intentionally physical, not just an aura recolor. */
+.motion-system-v21 .star-tier-1 {
+  --rank-motion: 0.96;
+}
+
+.motion-system-v21 .star-tier-2 {
+  --rank-motion: 1;
+}
+
+.motion-system-v21 .star-tier-3 {
+  --rank-motion: 1.05;
+}
+
+.motion-system-v21 .star-tier-1 .fighter-body-art {
+  opacity: 0.22;
+}
+
+.motion-system-v21 .star-tier-2 .fighter-body-art {
+  opacity: 0.17;
+  filter: brightness(0.82) saturate(0.94);
+}
+
+.motion-system-v21 .star-tier-3 .fighter-body-art {
+  opacity: 0.13;
+  filter: brightness(0.94) saturate(1.08);
+}
+
+.motion-system-v21 .star-tier-2 .fighter-depth-shadow {
+  width: 57px;
+  height: 15px;
+}
+
+.motion-system-v21 .star-tier-3 .fighter-depth-shadow {
+  width: 65px;
+  height: 17px;
+}
+
+.motion-system-v21 .star-tier-2 .fighter-ground {
+  width: 54px;
+  height: 14px;
+}
+
+.motion-system-v21 .star-tier-3 .fighter-ground {
+  width: 62px;
+  height: 16px;
+}
+
+.motion-system-v21 .star-tier-2 .fighter-body-rim {
+  width: 69px;
+  height: 89px;
+}
+
+.motion-system-v21 .star-tier-3 .fighter-body-rim {
+  width: 79px;
+  height: 103px;
+}
+
+.motion-system-v21 .star-tier-2 .fighter-rig {
+  filter:
+    drop-shadow(0 0 4px rgba(104, 205, 231, 0.5))
+    drop-shadow(0 9px 5px rgba(0, 0, 0, 0.78));
+}
+
+.motion-system-v21 .star-tier-3 .fighter-rig {
+  filter:
+    drop-shadow(0 0 6px rgba(255, 184, 55, 0.66))
+    drop-shadow(0 10px 6px rgba(0, 0, 0, 0.82));
+}
+
+.motion-system-v21 .star-tier-2 .fighter-ascension-ring,
+.motion-system-v21 .star-tier-3 .fighter-ascension-ring {
+  bottom: -4px;
+  display: block;
+  width: 71px;
+  height: 21px;
+}
+
+.motion-system-v21 .star-tier-3 .fighter-ascension-ring {
+  width: 94px;
+  height: 29px;
+}
+
+.motion-system-v21 .star-tier-2 .fighter-rank-halo,
+.motion-system-v21 .star-tier-3 .fighter-rank-halo {
+  left: 50%;
+  top: 7px;
+  transform: translateX(-50%) rotateX(66deg);
+}
+
+.motion-system-v21 .star-tier-3 .fighter-rank-halo {
+  top: 1px;
+}
+
+.motion-system-v21 .star-tier-1 .combat-stars {
+  color: #d9a95b;
+  font-size: 6px;
+}
+
+.motion-system-v21 .star-tier-2 .combat-stars {
+  color: #d8f7ff;
+  font-size: 7px;
+}
+
+.motion-system-v21 .star-tier-3 .combat-stars {
+  color: #ffe391;
+  font-size: 9px;
+}
+
+/* Locomotion: hips lead, torso counters, head stabilizes, arms oppose. */
+.motion-system-v21 .combat-unit.action-move .combat-fighter {
+  translate: 0 0;
+  animation: v21-root-run 380ms cubic-bezier(0.42, 0, 0.58, 1) infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .fighter-body-art {
+  animation: v21-seam-run 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .segment-legs {
+  animation: v21-run-legs 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .segment-torso {
+  animation: v21-run-torso 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .segment-head {
+  animation: v21-run-head 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .segment-arm-back {
+  animation: v21-run-arm-back 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .segment-arm-weapon {
+  animation: v21-run-arm-front 380ms ease-in-out infinite;
+}
+
+.motion-system-v21 .combat-unit.action-move .fighter-afterimage {
+  animation: v21-run-afterimage 380ms ease-out infinite;
+}
+
+/* Base strike: anticipation -> contact -> recoil -> recovery. */
+.motion-system-v21 .combat-unit.action-attack .combat-fighter {
+  translate: 0 0;
+  animation: v21-root-strike 440ms cubic-bezier(0.15, 0.76, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .fighter-body-art {
+  animation: v21-seam-strike 440ms cubic-bezier(0.15, 0.76, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .segment-legs {
+  animation: v21-strike-legs 440ms ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .segment-torso {
+  animation: v21-strike-torso 440ms cubic-bezier(0.15, 0.76, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .segment-head {
+  animation: v21-strike-head 440ms ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .segment-arm-back {
+  animation: v21-strike-arm-back 440ms ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .segment-arm-weapon {
+  animation: v21-strike-arm-front 440ms cubic-bezier(0.15, 0.8, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-attack .fighter-afterimage {
+  animation: v21-strike-afterimage 440ms ease-out both;
+}
+
+/* Heavy weapons use a visibly longer wind-up and follow-through. */
+.motion-system-v21
+  :is(.weapon-guandao, .weapon-halberd, .weapon-greatblade).action-attack
+  .combat-fighter {
+  animation: v21-root-heavy 540ms cubic-bezier(0.14, 0.76, 0.18, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-guandao, .weapon-halberd, .weapon-greatblade).action-attack
+  .segment-torso {
+  animation: v21-heavy-torso 540ms cubic-bezier(0.14, 0.76, 0.18, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-guandao, .weapon-halberd, .weapon-greatblade).action-attack
+  .segment-arm-weapon {
+  animation: v21-heavy-arm 540ms cubic-bezier(0.12, 0.8, 0.16, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-war-spear, .weapon-serpent-spear).action-attack
+  .combat-fighter {
+  animation: v21-root-thrust 410ms cubic-bezier(0.12, 0.82, 0.2, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-war-spear, .weapon-serpent-spear).action-attack
+  .segment-arm-weapon {
+  animation: v21-thrust-arm 410ms cubic-bezier(0.12, 0.82, 0.2, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-war-spear, .weapon-serpent-spear).action-attack
+  .segment-arm-back {
+  animation: v21-thrust-guide 410ms ease-out both;
+}
+
+.motion-system-v21 .weapon-twin-sword.action-attack .segment-arm-weapon,
+.motion-system-v21 .weapon-twin-dagger.action-attack .segment-arm-weapon {
+  animation: v21-cross-cut-front 360ms ease-out both;
+}
+
+.motion-system-v21 .weapon-twin-sword.action-attack .segment-arm-back,
+.motion-system-v21 .weapon-twin-dagger.action-attack .segment-arm-back {
+  animation: v21-cross-cut-back 360ms ease-out both;
+}
+
+.motion-system-v21 .weapon-war-bow.action-attack .combat-fighter {
+  animation: v21-root-ranged 500ms ease-out both;
+}
+
+.motion-system-v21 .weapon-war-bow.action-attack .segment-arm-weapon {
+  animation: v21-bow-hold 500ms ease-out both;
+}
+
+.motion-system-v21 .weapon-war-bow.action-attack .segment-arm-back {
+  animation: v21-bow-draw 500ms ease-out both;
+}
+
+.motion-system-v21
+  :is(.weapon-feather-fan, .weapon-ritual-staff).action-attack
+  .combat-fighter {
+  animation: v21-root-cast 560ms ease-out both;
+}
+
+.motion-system-v21
+  :is(.weapon-feather-fan, .weapon-ritual-staff).action-attack
+  .segment-arm-weapon {
+  animation: v21-cast-front 560ms ease-out both;
+}
+
+.motion-system-v21
+  :is(.weapon-feather-fan, .weapon-ritual-staff).action-attack
+  .segment-arm-back {
+  animation: v21-cast-back 560ms ease-out both;
+}
+
+/* Ultimate pose is long enough to sync with the cinematic cut-in. */
+.motion-system-v21 .combat-unit.action-skill .combat-fighter {
+  translate: 0 0;
+  animation: v21-root-ultimate var(--cinematic-duration) cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .fighter-body-art {
+  opacity: 0.12;
+  animation: v21-seam-ultimate var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .segment-legs {
+  animation: v21-ultimate-legs var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .segment-torso {
+  animation: v21-ultimate-torso var(--cinematic-duration) cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .segment-head {
+  animation: v21-ultimate-head var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .segment-arm-back {
+  animation: v21-ultimate-arm-back var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .segment-arm-weapon {
+  animation: v21-ultimate-arm-front var(--cinematic-duration) cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .fighter-afterimage {
+  animation: v21-ultimate-afterimage var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21
+  :is(.weapon-guandao, .weapon-halberd, .weapon-greatblade).action-skill
+  .segment-arm-weapon {
+  animation: v21-ultimate-heavy-arm var(--cinematic-duration) cubic-bezier(0.12, 0.82, 0.18, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-war-spear, .weapon-serpent-spear).action-skill
+  .segment-arm-weapon {
+  animation: v21-ultimate-thrust-arm var(--cinematic-duration) cubic-bezier(0.12, 0.82, 0.18, 1) both;
+}
+
+.motion-system-v21
+  :is(.weapon-feather-fan, .weapon-ritual-staff).action-skill
+  .segment-arm-weapon {
+  animation: v21-ultimate-cast-front var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21
+  :is(.weapon-feather-fan, .weapon-ritual-staff).action-skill
+  .segment-arm-back {
+  animation: v21-ultimate-cast-back var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-hurt .combat-fighter {
+  translate: 0 0;
+  animation: v21-root-hit 300ms cubic-bezier(0.2, 0.74, 0.28, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-hurt .fighter-segment {
+  animation: v21-segment-hit 300ms cubic-bezier(0.2, 0.74, 0.28, 1) both;
+}
+
+.motion-system-v21 .combat-unit.action-heal .fighter-articulated-body {
+  animation: v21-heal-rise 620ms ease-out both;
+}
+
+.motion-system-v21 .combat-unit.dead .fighter-rig,
+.motion-system-v21 .combat-unit.side-enemy.dead .fighter-rig {
+  opacity: 0.58;
+  filter:
+    grayscale(0.9)
+    brightness(0.46)
+    drop-shadow(0 8px 5px rgba(0, 0, 0, 0.76));
+  transform:
+    translate(-43%, 13px)
+    rotate(70deg)
+    scaleX(var(--fighter-facing))
+    scale(var(--fighter-dead-scale));
+}
+
+.motion-system-v21 .combat-unit.dead .fighter-segment,
+.motion-system-v21 .combat-unit.dead .fighter-body-art {
+  animation: none;
+}
+
+/* Weapon trails and impacts now land on the contact frame. */
+.motion-system-v21 .fighter-signature-trail {
+  inset: -4px -16px 0;
+}
+
+.motion-system-v21 .fighter-signature-trail > i {
+  width: 72px;
+  height: 4px;
+}
+
+.motion-system-v21 .combat-unit.action-attack .fighter-signature-trail > i {
+  animation: v21-weapon-trail 440ms ease-out both;
+}
+
+.motion-system-v21 .combat-unit.action-skill .fighter-signature-trail > i {
+  animation: v21-ultimate-trail var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v21 .combat-impact {
+  width: 50px;
+  height: 50px;
+  mix-blend-mode: screen;
+}
+
+.motion-system-v21 .combat-impact.impact-heavy {
+  scale: 1.3;
+  filter: brightness(1.35) drop-shadow(0 0 8px #f3c46a);
+}
+
+.motion-system-v21 .combat-impact.impact-ultimate {
+  scale: 1.7;
+  filter: brightness(1.75) drop-shadow(0 0 13px var(--terrain-accent));
+}
+
+.motion-system-v21 .ultimate-vfx {
+  animation-duration: var(--cinematic-duration);
+}
+
+/* Keep the stage composited and dim by opacity only to avoid filter flicker. */
+.motion-system-v21 .combat-arena.ultimate-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 39;
+  background:
+    radial-gradient(circle at 50% 47%, transparent 0 18%, rgba(1, 3, 3, 0.36) 56%, rgba(1, 2, 2, 0.7) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.58), transparent 28% 72%, rgba(0, 0, 0, 0.58));
+  opacity: 0;
+  pointer-events: none;
+  animation: v21-stage-dim var(--cinematic-duration) ease both;
+}
+
+.motion-system-v21 .combat-arena.ultimate-active .combat-unit:not(.action-skill) {
+  opacity: 0.64;
+}
+
+/* Full-width portrait cut-in. */
+.ultimate-cinematic {
+  position: absolute;
+  inset: 7% 0 12%;
+  z-index: 48;
+  overflow: hidden;
+  color: #fff4d2;
+  opacity: 0;
+  pointer-events: none;
+  clip-path: polygon(0 14%, 100% 0, 100% 84%, 0 100%);
+  background:
+    linear-gradient(90deg, rgba(3, 5, 5, 0.98) 0 20%, color-mix(in srgb, var(--signature) 32%, rgba(7, 9, 9, 0.95)) 47%, rgba(2, 4, 4, 0.96) 100%),
+    repeating-linear-gradient(116deg, transparent 0 14px, rgba(255, 255, 255, 0.025) 15px 16px);
+  box-shadow:
+    inset 0 2px var(--signature-accent),
+    inset 0 -2px var(--signature),
+    0 18px 54px rgba(0, 0, 0, 0.86);
+  animation: v21-cinematic-shell var(--cinematic-duration) cubic-bezier(0.16, 0.82, 0.2, 1) both;
+}
+
+.ultimate-cinematic::before,
+.ultimate-cinematic::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.ultimate-cinematic::before {
+  inset: 0;
+  background:
+    linear-gradient(105deg, transparent 0 18%, color-mix(in srgb, var(--signature-accent) 18%, transparent) 18.5% 19%, transparent 19.5% 58%, color-mix(in srgb, var(--signature) 24%, transparent) 58.5% 59%, transparent 59.5%),
+    radial-gradient(circle at 72% 50%, color-mix(in srgb, var(--signature) 24%, transparent), transparent 35%);
+}
+
+.ultimate-cinematic::after {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--signature-accent), transparent);
+  box-shadow: 0 0 14px var(--signature);
+  animation: v21-cinematic-scan var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-cinematic-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+}
+
+.ultimate-cinematic-wash > i {
+  position: absolute;
+  left: 44%;
+  top: 50%;
+  display: block;
+  width: 70%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--signature-accent), transparent);
+  box-shadow: 0 0 9px var(--signature);
+  opacity: 0;
+  transform-origin: 0 50%;
+  animation: v21-cinematic-streak var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-cinematic-wash > i:nth-child(1) { rotate: -8deg; }
+.ultimate-cinematic-wash > i:nth-child(2) { rotate: 6deg; animation-delay: 45ms; }
+.ultimate-cinematic-wash > i:nth-child(3) { rotate: -18deg; animation-delay: 85ms; }
+.ultimate-cinematic-wash > i:nth-child(4) { rotate: 17deg; animation-delay: 120ms; }
+.ultimate-cinematic-wash > i:nth-child(5) { rotate: -30deg; animation-delay: 150ms; }
+.ultimate-cinematic-wash > i:nth-child(6) { rotate: 28deg; animation-delay: 180ms; }
+
+.ultimate-portrait-frame {
+  position: absolute;
+  left: 5%;
+  top: -8%;
+  z-index: 7;
+  width: min(35%, 340px);
+  height: 118%;
+  overflow: hidden;
+  border-right: 2px solid color-mix(in srgb, var(--signature-accent) 72%, transparent);
+  background: #090b0a;
+  box-shadow:
+    18px 0 40px rgba(0, 0, 0, 0.56),
+    3px 0 0 color-mix(in srgb, var(--signature) 68%, transparent);
+  clip-path: polygon(0 0, 100% 10%, 84% 100%, 0 92%);
+  transform-origin: 30% 50%;
+  animation: v21-portrait-enter var(--cinematic-duration) cubic-bezier(0.14, 0.86, 0.18, 1) both;
+}
+
+.ultimate-portrait-art {
+  position: absolute;
+  inset: -2%;
+  display: block;
+  background-repeat: no-repeat;
+  filter: contrast(1.06) saturate(0.92);
+  transform: scale(1.02);
+  animation: v21-portrait-push var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-portrait-light {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(108deg, rgba(255, 244, 207, 0.16), transparent 26% 58%, rgba(0, 0, 0, 0.72)),
+    linear-gradient(0deg, color-mix(in srgb, var(--signature) 30%, transparent), transparent 48%);
+  mix-blend-mode: screen;
+}
+
+.ultimate-portrait-frame > b {
+  position: absolute;
+  right: 11%;
+  bottom: 11%;
+  z-index: 3;
+  color: rgba(255, 244, 209, 0.22);
+  font-family: "Batang", serif;
+  font-size: clamp(32px, 5vw, 72px);
+  font-weight: 900;
+  letter-spacing: -0.08em;
+  text-shadow: 0 0 14px var(--signature);
+}
+
+.ultimate-cinematic-copy {
+  position: absolute;
+  left: 37%;
+  top: 24%;
+  z-index: 8;
+  display: grid;
+  align-content: center;
+  width: 40%;
+  min-width: 260px;
+  animation: v21-copy-enter var(--cinematic-duration) cubic-bezier(0.18, 0.82, 0.22, 1) both;
+}
+
+.ultimate-cinematic-copy small {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: color-mix(in srgb, var(--signature-accent) 78%, #9b917b);
+  font-family: "Batang", serif;
+  font-size: clamp(8px, 0.85vw, 12px);
+  letter-spacing: 0.16em;
+}
+
+.ultimate-cinematic-copy small > i {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--signature-accent);
+  background: color-mix(in srgb, var(--signature) 48%, rgba(5, 7, 7, 0.86));
+  color: #fff4d2;
+  font-style: normal;
+  box-shadow: 0 0 9px color-mix(in srgb, var(--signature) 60%, transparent);
+}
+
+.ultimate-cinematic-copy h3 {
+  margin: 4px 0 0;
+  color: #fff4d2;
+  font-family: "Batang", serif;
+  font-size: clamp(22px, 3.2vw, 48px);
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  line-height: 0.96;
+  text-shadow:
+    0 3px 0 #000,
+    0 0 16px color-mix(in srgb, var(--signature) 52%, transparent);
+}
+
+.ultimate-cinematic-copy strong {
+  margin-top: 9px;
+  color: var(--signature-accent);
+  font-family: "Batang", serif;
+  font-size: clamp(15px, 2vw, 30px);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-shadow: 0 2px 5px #000;
+}
+
+.ultimate-cinematic-copy em {
+  margin-top: 6px;
+  color: rgba(229, 213, 176, 0.72);
+  font-family: "Batang", serif;
+  font-size: clamp(8px, 0.9vw, 12px);
+  font-style: normal;
+  letter-spacing: 0.22em;
+}
+
+.ultimate-cinematic-glyph {
+  position: absolute;
+  right: 7%;
+  top: 3%;
+  z-index: 5;
+  color: color-mix(in srgb, var(--signature-accent) 26%, transparent);
+  font-family: "Batang", serif;
+  font-size: clamp(120px, 19vw, 280px);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--signature) 46%, transparent);
+  animation: v21-glyph-strike var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-cinematic-body {
+  position: absolute;
+  right: 2%;
+  bottom: -13%;
+  z-index: 6;
+  display: block;
+  width: 28%;
+  height: 118%;
+  opacity: 0.54;
+  filter:
+    saturate(0.76)
+    drop-shadow(0 0 13px color-mix(in srgb, var(--signature) 70%, transparent));
+  animation: v21-body-surge var(--cinematic-duration) cubic-bezier(0.14, 0.84, 0.2, 1) both;
+}
+
+.ultimate-cinematic-body > i {
+  position: absolute;
+  inset: 0;
+  display: block;
+  background-repeat: no-repeat;
+  background-size: 500% 500%;
+}
+
+.ultimate-cinematic-cut {
+  position: absolute;
+  right: -8%;
+  top: 42%;
+  z-index: 10;
+  display: block;
+  width: 78%;
+  height: 5px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, transparent, #fffbe6 28%, var(--signature-accent) 56%, transparent);
+  box-shadow:
+    0 0 8px #fff,
+    0 0 22px var(--signature);
+  opacity: 0;
+  transform-origin: 100% 50%;
+}
+
+.ultimate-cinematic-cut.cut-a {
+  rotate: -10deg;
+  animation: v21-final-cut var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-cinematic-cut.cut-b {
+  top: 59%;
+  rotate: 8deg;
+  animation: v21-final-cut-reverse var(--cinematic-duration) ease-out both;
+}
+
+.ultimate-cinematic-timeline {
+  position: absolute;
+  left: 36%;
+  right: 5%;
+  bottom: 17%;
+  z-index: 12;
+  display: block;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.ultimate-cinematic-timeline > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, var(--signature), var(--signature-accent), #fff7d7);
+  box-shadow: 0 0 8px var(--signature);
+  transform-origin: 0 50%;
+  animation: v21-cinematic-timeline var(--cinematic-duration) linear both;
+}
+
+.ultimate-cinematic.side-enemy .ultimate-portrait-frame {
+  left: auto;
+  right: 5%;
+  border-right: 0;
+  border-left: 2px solid color-mix(in srgb, var(--signature-accent) 72%, transparent);
+  clip-path: polygon(0 10%, 100% 0, 100% 92%, 16% 100%);
+}
+
+.ultimate-cinematic.side-enemy .ultimate-cinematic-copy {
+  left: 18%;
+  text-align: right;
+}
+
+.ultimate-cinematic.side-enemy .ultimate-cinematic-copy small {
+  justify-content: flex-end;
+}
+
+.ultimate-cinematic.side-enemy .ultimate-cinematic-body {
+  left: 1%;
+  right: auto;
+}
+
+.ultimate-cinematic.side-enemy .ultimate-cinematic-glyph {
+  left: 6%;
+  right: auto;
+}
+
+.ultimate-cinematic.side-enemy .ultimate-cinematic-timeline {
+  left: 5%;
+  right: 36%;
+}
+
+.ultimate-cinematic.cinematic-star-2 {
+  box-shadow:
+    inset 0 3px #d9f8ff,
+    inset 0 -2px #579db4,
+    0 18px 54px rgba(0, 0, 0, 0.86);
+}
+
+.ultimate-cinematic.cinematic-star-3 {
+  box-shadow:
+    inset 0 3px #ffe69b,
+    inset 0 -3px #cb7d22,
+    0 18px 58px rgba(0, 0, 0, 0.9),
+    0 0 28px rgba(241, 169, 49, 0.3);
+}
+
+/* Articulated keyframes */
+@keyframes v21-seam-breathe {
+  0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.18; }
+  50% { transform: translateX(-50%) translateY(-1px) scale(1.006, 1.012); opacity: 0.22; }
+}
+
+@keyframes v21-idle-legs {
+  0%, 100% { transform: translateX(-50%) translateY(0) rotate(-0.4deg); }
+  50% { transform: translateX(-50%) translateY(1px) rotate(0.45deg); }
+}
+
+@keyframes v21-idle-torso {
+  0%, 100% { transform: translateX(-50%) rotate(-0.55deg) scale(1); }
+  50% { transform: translateX(-50%) translateY(-1.2px) rotate(0.6deg) scale(1.008, 1.016); }
+}
+
+@keyframes v21-idle-head {
+  0%, 100% { transform: translateX(-50%) rotate(-1.1deg); }
+  45% { transform: translateX(-50%) translateY(-1px) rotate(1.35deg); }
+}
+
+@keyframes v21-idle-arm-back {
+  0%, 100% { transform: translateX(-50%) rotate(1deg); }
+  50% { transform: translateX(-50%) rotate(-1.8deg); }
+}
+
+@keyframes v21-idle-arm-front {
+  0%, 100% { transform: translateX(-50%) rotate(-0.8deg); }
+  50% { transform: translateX(-50%) rotate(1.9deg); }
+}
+
+@keyframes v21-root-run {
+  0%, 100% { transform: translateY(1px) rotate(-1deg); }
+  50% { transform: translateY(-4px) rotate(1.2deg); }
+}
+
+@keyframes v21-seam-run {
+  0%, 100% { transform: translateX(-50%) translate(-2px, 1px) rotate(-2deg); opacity: 0.16; }
+  50% { transform: translateX(-50%) translate(2px, -2px) rotate(2deg); opacity: 0.2; }
+}
+
+@keyframes v21-run-legs {
+  0%, 100% { transform: translateX(-50%) translate(-3px, 1px) rotate(-4deg) scaleY(0.97); }
+  50% { transform: translateX(-50%) translate(3px, -1px) rotate(4deg) scaleY(1.02); }
+}
+
+@keyframes v21-run-torso {
+  0%, 100% { transform: translateX(-50%) translateX(1.5px) rotate(3deg); }
+  50% { transform: translateX(-50%) translateX(-1.5px) rotate(-3deg); }
+}
+
+@keyframes v21-run-head {
+  0%, 100% { transform: translateX(-50%) translateY(1px) rotate(-1.2deg); }
+  50% { transform: translateX(-50%) translateY(-1px) rotate(1.2deg); }
+}
+
+@keyframes v21-run-arm-back {
+  0%, 100% { transform: translateX(-50%) rotate(11deg) translateY(1px); }
+  50% { transform: translateX(-50%) rotate(-13deg) translateY(-1px); }
+}
+
+@keyframes v21-run-arm-front {
+  0%, 100% { transform: translateX(-50%) rotate(-10deg) translateY(-1px); }
+  50% { transform: translateX(-50%) rotate(12deg) translateY(1px); }
+}
+
+@keyframes v21-run-afterimage {
+  0% { opacity: 0; transform: translateX(-60%) scaleX(var(--fighter-facing)); }
+  42% { opacity: 0.22; }
+  100% { opacity: 0; transform: translateX(-45%) scaleX(var(--fighter-facing)); filter: blur(2px) drop-shadow(0 0 8px var(--signature)); }
+}
+
+@keyframes v21-root-strike {
+  0% { transform: translateX(var(--fighter-lunge-back)) translateY(1px) rotate(-2deg); }
+  30% { transform: translateX(var(--fighter-lunge-back)) translateY(-2px) rotate(-5deg); }
+  57% { transform: translateX(var(--fighter-lunge-heavy)) translateY(-3px) rotate(5deg) scale(1.06, 0.95); }
+  76% { transform: translateX(var(--fighter-lunge-soft)) rotate(2deg); }
+  100% { transform: translateX(0) rotate(0) scale(1); }
+}
+
+@keyframes v21-seam-strike {
+  0%, 28% { transform: translateX(-50%) rotate(-4deg); opacity: 0.16; }
+  58% { transform: translateX(-46%) rotate(7deg) scale(1.05, 0.96); opacity: 0.24; filter: brightness(1.25); }
+  100% { transform: translateX(-50%) rotate(0); opacity: 0.18; }
+}
+
+@keyframes v21-strike-legs {
+  0% { transform: translateX(-50%) translateX(-2px) scaleY(1); }
+  48% { transform: translateX(-50%) translateX(1px) scale(1.05, 0.96); }
+  100% { transform: translateX(-50%) scale(1); }
+}
+
+@keyframes v21-strike-torso {
+  0% { transform: translateX(-50%) rotate(-5deg); }
+  30% { transform: translateX(-50%) rotate(-10deg) translateX(-2px); }
+  58% { transform: translateX(-50%) rotate(8deg) translateX(8px) scale(1.05, 0.96); filter: brightness(1.2); }
+  100% { transform: translateX(-50%) rotate(0); }
+}
+
+@keyframes v21-strike-head {
+  0%, 28% { transform: translateX(-50%) rotate(-3deg); }
+  58% { transform: translateX(-50%) rotate(5deg) translateX(2px); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-strike-arm-back {
+  0% { transform: translateX(-50%) rotate(3deg); }
+  36% { transform: translateX(-50%) rotate(13deg) translateX(-2px); }
+  64% { transform: translateX(-50%) rotate(-8deg); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-strike-arm-front {
+  0% { transform: translateX(-50%) rotate(-15deg); }
+  34% { transform: translateX(-50%) rotate(-31deg) translateY(-2px); }
+  59% { transform: translateX(-50%) rotate(23deg) translate(9px, 2px); filter: brightness(1.32); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-strike-afterimage {
+  0%, 22% { opacity: 0; transform: translateX(-58%) scaleX(var(--fighter-facing)); }
+  45% { opacity: 0.36; }
+  100% { opacity: 0; transform: translateX(-35%) translateY(-4px) scaleX(var(--fighter-facing)); filter: blur(2px) drop-shadow(0 0 12px var(--signature)); }
+}
+
+@keyframes v21-root-heavy {
+  0% { transform: translateX(var(--fighter-lunge-back)) translateY(2px) rotate(-5deg) scale(1.02, 0.98); }
+  36% { transform: translateX(var(--fighter-lunge-back)) translateY(-5px) rotate(-10deg) scale(1.06, 0.95); }
+  63% { transform: translateX(var(--fighter-lunge-heavy)) rotate(9deg) scale(1.11, 0.9); }
+  82% { transform: translateX(var(--fighter-lunge-soft)) rotate(3deg); }
+  100% { transform: translateX(0) rotate(0) scale(1); }
+}
+
+@keyframes v21-heavy-torso {
+  0% { transform: translateX(-50%) rotate(-5deg); }
+  34% { transform: translateX(-50%) rotate(-13deg) translate(-4px, -4px); }
+  63% { transform: translateX(-50%) rotate(12deg) translate(10px, 2px) scale(1.08, 0.93); filter: brightness(1.34); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-heavy-arm {
+  0% { transform: translateX(-50%) rotate(-16deg); }
+  35% { transform: translateX(-50%) rotate(-43deg) translate(-4px, -4px); }
+  62% { transform: translateX(-50%) rotate(34deg) translate(11px, 3px); filter: brightness(1.42) drop-shadow(0 0 5px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-root-thrust {
+  0% { transform: translateX(var(--fighter-lunge-back)) scaleX(0.98); }
+  38% { transform: translateX(var(--fighter-lunge-back)) translateY(-2px) scale(0.97, 1.02); }
+  59% { transform: translateX(var(--fighter-lunge-ultra)) scale(1.14, 0.9); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+@keyframes v21-thrust-arm {
+  0% { transform: translateX(-50%) rotate(-5deg) translateX(-3px); }
+  38% { transform: translateX(-50%) rotate(-3deg) translateX(-8px); }
+  59% { transform: translateX(-50%) rotate(3deg) translateX(20px) scaleX(1.08); filter: brightness(1.35); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-thrust-guide {
+  0%, 34% { transform: translateX(-50%) rotate(6deg) translateX(-2px); }
+  59% { transform: translateX(-50%) rotate(-4deg) translateX(12px); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-cross-cut-front {
+  0% { transform: translateX(-50%) rotate(-18deg); }
+  38% { transform: translateX(-50%) rotate(27deg) translateX(11px); filter: brightness(1.4); }
+  68% { transform: translateX(-50%) rotate(-8deg) translateX(4px); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-cross-cut-back {
+  0%, 18% { transform: translateX(-50%) rotate(18deg); }
+  53% { transform: translateX(-50%) rotate(-27deg) translateX(10px); filter: brightness(1.34); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-root-ranged {
+  0%, 38% { transform: translateX(var(--fighter-lunge-back)) rotate(-2deg); }
+  55% { transform: translateX(var(--fighter-lunge-soft)) translateY(-2px) rotate(3deg) scale(1.05, 0.96); }
+  70% { transform: translateX(var(--fighter-recoil)) rotate(-2deg); }
+  100% { transform: translateX(0) rotate(0); }
+}
+
+@keyframes v21-bow-hold {
+  0%, 38% { transform: translateX(-50%) rotate(-4deg) translateX(1px); }
+  55% { transform: translateX(-50%) rotate(3deg) translateX(6px); }
+  70% { transform: translateX(-50%) rotate(-2deg) translateX(10px); filter: brightness(1.3); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-bow-draw {
+  0% { transform: translateX(-50%) rotate(5deg); }
+  43% { transform: translateX(-50%) rotate(15deg) translate(-8px, -2px); }
+  59% { transform: translateX(-50%) rotate(-7deg) translateX(8px); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-root-cast {
+  0% { transform: translateY(0) rotate(-1deg); }
+  40% { transform: translateY(-7px) rotate(2deg) scale(1.04); }
+  68% { transform: translateX(var(--fighter-lunge-soft)) translateY(-4px) scale(1.08, 0.96); }
+  100% { transform: translateY(0) rotate(0) scale(1); }
+}
+
+@keyframes v21-cast-front {
+  0% { transform: translateX(-50%) rotate(5deg) translateY(2px); }
+  40% { transform: translateX(-50%) rotate(-14deg) translate(-2px, -9px); }
+  68% { transform: translateX(-50%) rotate(12deg) translate(6px, -5px); filter: brightness(1.34) drop-shadow(0 0 5px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-cast-back {
+  0% { transform: translateX(-50%) rotate(-2deg); }
+  43% { transform: translateX(-50%) rotate(13deg) translate(-5px, -5px); }
+  72% { transform: translateX(-50%) rotate(5deg) translateY(-2px); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-root-ultimate {
+  0% { transform: translateY(1px) scale(1); }
+  20% { transform: translateY(3px) scale(1.04, 0.96); }
+  46% { transform: translateY(-10px) scale(1.09); filter: brightness(1.28); }
+  64% { transform: translateX(var(--fighter-lunge-heavy)) translateY(-6px) scale(1.16, 0.91); filter: brightness(1.62) drop-shadow(0 0 10px var(--signature)); }
+  80% { transform: translateX(var(--fighter-lunge-soft)) translateY(-2px) scale(1.07); }
+  100% { transform: translateY(0) scale(1); filter: none; }
+}
+
+@keyframes v21-seam-ultimate {
+  0% { transform: translateX(-50%); opacity: 0.14; }
+  45% { transform: translateX(-50%) translateY(-5px) scale(1.08); opacity: 0.2; }
+  64% { transform: translateX(-44%) translateY(-3px) rotate(7deg) scale(1.13, 0.93); opacity: 0.28; filter: brightness(1.55); }
+  100% { transform: translateX(-50%); opacity: 0.14; }
+}
+
+@keyframes v21-ultimate-legs {
+  0% { transform: translateX(-50%); }
+  22% { transform: translateX(-50%) scale(1.07, 0.94); }
+  48% { transform: translateX(-50%) translateY(-3px) scale(0.98, 1.04); }
+  66% { transform: translateX(-50%) translateX(5px) scale(1.08, 0.93); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-torso {
+  0% { transform: translateX(-50%) rotate(-2deg); }
+  22% { transform: translateX(-50%) translateY(2px) rotate(-5deg) scale(1.04, 0.96); }
+  46% { transform: translateX(-50%) translateY(-7px) rotate(3deg) scale(1.08); filter: brightness(1.34); }
+  64% { transform: translateX(-50%) translate(10px, -4px) rotate(10deg) scale(1.12, 0.91); filter: brightness(1.65) drop-shadow(0 0 7px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-head {
+  0%, 20% { transform: translateX(-50%) rotate(-3deg); }
+  44% { transform: translateX(-50%) translateY(-5px) rotate(3deg); }
+  64% { transform: translateX(-50%) translate(3px, -3px) rotate(7deg); filter: brightness(1.4); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-arm-back {
+  0% { transform: translateX(-50%); }
+  24% { transform: translateX(-50%) rotate(15deg) translate(-5px, -4px); }
+  47% { transform: translateX(-50%) rotate(8deg) translate(-3px, -8px); }
+  65% { transform: translateX(-50%) rotate(-11deg) translate(8px, -2px); filter: brightness(1.4); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-arm-front {
+  0% { transform: translateX(-50%); }
+  22% { transform: translateX(-50%) rotate(-18deg) translate(-3px, -5px); }
+  46% { transform: translateX(-50%) rotate(-28deg) translate(-4px, -8px); }
+  64% { transform: translateX(-50%) rotate(29deg) translate(12px, -1px); filter: brightness(1.72) drop-shadow(0 0 8px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-heavy-arm {
+  0% { transform: translateX(-50%) rotate(-8deg); }
+  23% { transform: translateX(-50%) rotate(-24deg) translate(-4px, -2px); }
+  47% { transform: translateX(-50%) rotate(-48deg) translate(-7px, -9px); }
+  65% { transform: translateX(-50%) rotate(41deg) translate(15px, 3px); filter: brightness(1.85) drop-shadow(0 0 10px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-thrust-arm {
+  0% { transform: translateX(-50%) rotate(-5deg); }
+  25% { transform: translateX(-50%) translateX(-9px) rotate(-3deg); }
+  48% { transform: translateX(-50%) translate(-13px, -2px) rotate(-2deg); }
+  64% { transform: translateX(-50%) translateX(27px) rotate(3deg) scaleX(1.12); filter: brightness(1.8) drop-shadow(0 0 9px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-cast-front {
+  0% { transform: translateX(-50%) rotate(4deg); }
+  26% { transform: translateX(-50%) rotate(-15deg) translate(-3px, -8px); }
+  48% { transform: translateX(-50%) rotate(-29deg) translate(-5px, -12px); filter: brightness(1.4); }
+  64% { transform: translateX(-50%) rotate(18deg) translate(7px, -7px); filter: brightness(1.9) drop-shadow(0 0 11px var(--signature)); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-cast-back {
+  0% { transform: translateX(-50%) rotate(-2deg); }
+  26% { transform: translateX(-50%) rotate(17deg) translate(-6px, -5px); }
+  48% { transform: translateX(-50%) rotate(22deg) translate(-8px, -10px); }
+  64% { transform: translateX(-50%) rotate(8deg) translate(-2px, -7px); filter: brightness(1.65); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes v21-ultimate-afterimage {
+  0%, 18% { opacity: 0; transform: translateX(-50%) scaleX(var(--fighter-facing)) scale(0.88); }
+  45% { opacity: 0.34; transform: translateX(-50%) translateY(-5px) scaleX(var(--fighter-facing)) scale(1.05); }
+  70% { opacity: 0.44; transform: translateX(-37%) translateY(-9px) scaleX(var(--fighter-facing)) scale(1.18); }
+  100% { opacity: 0; transform: translateX(-31%) translateY(-12px) scaleX(var(--fighter-facing)) scale(1.25); filter: blur(3px) drop-shadow(0 0 16px var(--signature)); }
+}
+
+@keyframes v21-root-hit {
+  0% { transform: translateX(0); filter: brightness(1); }
+  34% { transform: translateX(var(--fighter-recoil)) translateY(2px) rotate(-6deg) scale(1.06, 0.94); filter: brightness(2.1) saturate(0.35); }
+  64% { transform: translateX(var(--fighter-recoil-soft)) rotate(4deg) scale(0.98, 1.02); filter: brightness(1.35); }
+  100% { transform: translateX(0); filter: none; }
+}
+
+@keyframes v21-segment-hit {
+  0% { transform: translateX(-50%); }
+  34% { transform: translateX(-56%) rotate(-5deg); filter: brightness(1.7) saturate(0.6); }
+  100% { transform: translateX(-50%); filter: none; }
+}
+
+@keyframes v21-heal-rise {
+  0%, 100% { transform: translateY(0) scale(1); filter: brightness(1); }
+  50% { transform: translateY(-6px) scale(1.04); filter: brightness(1.5) drop-shadow(0 0 8px #8fd47e); }
+}
+
+@keyframes v21-weapon-trail {
+  0%, 26% { opacity: 0; transform: translate(-18px, 11px) scaleX(0.2) rotate(-12deg); }
+  45% { opacity: 1; }
+  100% { opacity: 0; transform: translate(34px, -20px) scaleX(1.5) rotate(-48deg); }
+}
+
+@keyframes v21-ultimate-trail {
+  0%, 44% { opacity: 0; transform: translate(-26px, 17px) scaleX(0.18) rotate(-18deg); }
+  58% { opacity: 1; }
+  78% { opacity: 0.92; transform: translate(38px, -24px) scaleX(1.65) rotate(-52deg); }
+  100% { opacity: 0; transform: translate(48px, -30px) scaleX(1.9) rotate(-56deg); }
+}
+
+/* Cinematic keyframes */
+@keyframes v21-stage-dim {
+  0%, 100% { opacity: 0; }
+  12%, 78% { opacity: 1; }
+}
+
+@keyframes v21-cinematic-shell {
+  0% { opacity: 0; transform: translateX(-7%) scaleX(0.9); }
+  10% { opacity: 1; transform: translateX(0) scaleX(1); }
+  78% { opacity: 1; transform: translateX(0) scaleX(1); }
+  100% { opacity: 0; transform: translateX(6%) scaleX(1.04); }
+}
+
+@keyframes v21-cinematic-scan {
+  0% { opacity: 0; transform: translateY(-80px) scaleX(0.3); }
+  34% { opacity: 0.9; transform: translateY(0) scaleX(1); }
+  100% { opacity: 0; transform: translateY(86px) scaleX(1.4); }
+}
+
+@keyframes v21-cinematic-streak {
+  0%, 16% { opacity: 0; transform: translateX(-120px) scaleX(0.25); }
+  42% { opacity: 0.78; }
+  80%, 100% { opacity: 0; transform: translateX(190px) scaleX(1.4); }
+}
+
+@keyframes v21-portrait-enter {
+  0% { opacity: 0; transform: translateX(-34%) skewX(-7deg) scale(0.92); }
+  18% { opacity: 1; transform: translateX(0) skewX(0) scale(1); }
+  82% { opacity: 1; transform: translateX(0) scale(1.02); }
+  100% { opacity: 0; transform: translateX(10%) scale(1.06); }
+}
+
+@keyframes v21-portrait-push {
+  0% { transform: scale(1.02) translateX(-2%); filter: contrast(1.03) saturate(0.85); }
+  58% { transform: scale(1.12) translateX(2%); filter: contrast(1.12) saturate(1.04) brightness(1.08); }
+  100% { transform: scale(1.17) translateX(4%); filter: contrast(1.2) saturate(0.7) brightness(1.25); }
+}
+
+@keyframes v21-copy-enter {
+  0%, 12% { opacity: 0; transform: translateX(48px); }
+  29% { opacity: 1; transform: translateX(0); }
+  78% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-24px); }
+}
+
+@keyframes v21-glyph-strike {
+  0%, 22% { opacity: 0; transform: scale(2.1) rotate(-9deg); }
+  42% { opacity: 1; transform: scale(0.94) rotate(2deg); }
+  72% { opacity: 0.64; transform: scale(1.04) rotate(0); }
+  100% { opacity: 0; transform: scale(1.26) rotate(4deg); }
+}
+
+@keyframes v21-body-surge {
+  0%, 24% { opacity: 0; transform: translateX(25%) scale(0.82); }
+  48% { opacity: 0.5; transform: translateX(0) scale(1); }
+  72% { opacity: 0.64; transform: translateX(-8%) scale(1.08); }
+  100% { opacity: 0; transform: translateX(-18%) scale(1.14); }
+}
+
+@keyframes v21-final-cut {
+  0%, 53% { opacity: 0; transform: translateX(110px) scaleX(0.15); }
+  63% { opacity: 1; }
+  82%, 100% { opacity: 0; transform: translateX(-90px) scaleX(1.35); }
+}
+
+@keyframes v21-final-cut-reverse {
+  0%, 59% { opacity: 0; transform: translateX(-80px) scaleX(0.2); }
+  69% { opacity: 0.9; }
+  88%, 100% { opacity: 0; transform: translateX(90px) scaleX(1.25); }
+}
+
+@keyframes v21-cinematic-timeline {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
+}
+
+@media (max-width: 900px) {
+  .ultimate-cinematic {
+    inset: 13% 0 17%;
+  }
+
+  .ultimate-portrait-frame {
+    left: 2%;
+    width: 39%;
+  }
+
+  .ultimate-cinematic-copy {
+    left: 39%;
+    top: 26%;
+    width: 42%;
+    min-width: 0;
+  }
+
+  .ultimate-cinematic-body {
+    right: -4%;
+    width: 32%;
+  }
+
+  .ultimate-cinematic.side-enemy .ultimate-portrait-frame {
+    right: 2%;
+  }
+
+  .ultimate-cinematic.side-enemy .ultimate-cinematic-copy {
+    left: 10%;
+  }
+}
+
+@media (max-width: 680px) {
+  .motion-system-v21 .fighter-rig,
+  .motion-system-v21 .side-enemy .fighter-rig {
+    width: 112px;
+    height: 112px;
+  }
+
+  .motion-system-v21 .fighter-body-art,
+  .motion-system-v21 .fighter-afterimage,
+  .motion-system-v21 .fighter-segment {
+    width: 112px;
+    height: 112px;
+  }
+
+  .ultimate-cinematic-copy em,
+  .ultimate-cinematic-body {
+    display: none;
+  }
+
+  .ultimate-cinematic-copy {
+    width: 53%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-system-v21 .fighter-body-art,
+  .motion-system-v21 .fighter-segment,
+  .motion-system-v21 .fighter-afterimage,
+  .motion-system-v21 .combat-fighter,
+  .motion-system-v21 .ultimate-vfx,
+  .ultimate-cinematic,
+  .ultimate-cinematic *,
+  .motion-system-v21 .combat-arena.ultimate-active::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+  }
+
+  .ultimate-cinematic {
+    opacity: 1;
+    transform: none;
+  }
+
+  .ultimate-cinematic .ultimate-portrait-frame,
+  .ultimate-cinematic .ultimate-cinematic-copy,
+  .ultimate-cinematic .ultimate-cinematic-glyph {
+    opacity: 1;
+    transform: none;
+  }
+
+  .motion-system-v21 .combat-arena.ultimate-active::after {
+    opacity: 0.84;
+  }
+}
+
+/* ==========================================================================
+   V22 ultimate key art + fullscreen-safe combat shell
+   Generated hero scenes remain full-bleed and all text stays in a safe zone.
+   ========================================================================== */
+
+.motion-system-v22.live-combat {
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: clamp(6px, 1.35vmin, 18px);
+}
+
+.motion-system-v22 .live-combat-shell {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  max-width: 1600px;
+  max-height: 980px;
+  contain: layout paint;
+  grid-template-rows: clamp(52px, 7.6dvh, 70px) minmax(0, 1fr);
+}
+
+.motion-system-v22 .live-combat-head,
+.motion-system-v22 .live-combat-body,
+.motion-system-v22 .combat-arena,
+.motion-system-v22 .combat-feed {
+  min-width: 0;
+  min-height: 0;
+}
+
+.motion-system-v22 .live-combat-body {
+  grid-template-columns: minmax(0, 1fr) clamp(196px, 17vw, 246px);
+}
+
+.motion-system-v22 .combat-arena {
+  container-type: size;
+}
+
+.motion-system-v22 .ultimate-cinematic {
+  inset: auto 0;
+  top: 50%;
+  width: 100%;
+  height: 76%;
+  max-height: none;
+  overflow: hidden;
+  background: #030605;
+  clip-path: polygon(0 8%, 100% 0, 100% 92%, 0 100%);
+  transform-origin: 50% 50%;
+  animation-name: v22-cinematic-shell;
+}
+
+@supports (height: 1cqh) {
+  .motion-system-v22 .ultimate-cinematic {
+    height: min(84cqh, 56.25cqw);
+  }
+}
+
+.motion-system-v22 .ultimate-scene-art {
+  position: absolute;
+  inset: -2%;
+  z-index: 0;
+  overflow: hidden;
+  background-color: #060907;
+  background-image:
+    linear-gradient(90deg, transparent 0 32%, rgba(3, 5, 5, 0.14) 46%, rgba(2, 4, 4, 0.9) 78% 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent 30% 66%, rgba(0, 0, 0, 0.62)),
+    var(--ultimate-scene-image);
+  background-position:
+    center,
+    center,
+    var(--ultimate-scene-focus);
+  background-repeat: no-repeat;
+  background-size: cover;
+  opacity: 0;
+  transform: scale(1.04);
+  will-change: transform, opacity;
+  animation: v22-scene-drift var(--cinematic-duration) ease-out both;
+}
+
+.motion-system-v22 .ultimate-scene-art::before,
+.motion-system-v22 .ultimate-scene-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.motion-system-v22 .ultimate-scene-art::before {
+  background:
+    linear-gradient(90deg, transparent 0 44%, color-mix(in srgb, var(--signature) 12%, transparent) 68%, transparent),
+    radial-gradient(circle at 73% 46%, color-mix(in srgb, var(--signature-accent) 11%, transparent), transparent 32%);
+  mix-blend-mode: screen;
+}
+
+.motion-system-v22 .ultimate-scene-art::after {
+  background:
+    repeating-linear-gradient(112deg, transparent 0 15px, rgba(255, 255, 255, 0.018) 16px 17px),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.08), transparent 42%, rgba(0, 0, 0, 0.34));
+}
+
+.motion-system-v22 .ultimate-cinematic.side-enemy .ultimate-scene-art {
+  background-image:
+    linear-gradient(90deg, transparent 0 32%, rgba(3, 5, 5, 0.14) 46%, rgba(2, 4, 4, 0.9) 78% 100%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0.2), transparent 30% 66%, rgba(0, 0, 0, 0.62)),
+    var(--ultimate-scene-image);
+  animation-name: v22-scene-drift-enemy;
+}
+
+.motion-system-v22 .ultimate-cinematic::before {
+  z-index: 2;
+  background:
+    linear-gradient(105deg, transparent 0 58%, color-mix(in srgb, var(--signature-accent) 20%, transparent) 58.4% 58.8%, transparent 59.2%),
+    radial-gradient(circle at 77% 48%, color-mix(in srgb, var(--signature) 18%, transparent), transparent 32%);
+}
+
+.motion-system-v22 .ultimate-cinematic::after {
+  z-index: 11;
+}
+
+.motion-system-v22 .ultimate-cinematic-wash {
+  z-index: 4;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-portrait-frame,
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-body {
+  display: none;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-copy {
+  left: auto;
+  right: clamp(22px, 6%, 88px);
+  top: 23%;
+  width: min(42%, 520px);
+  min-width: 250px;
+  padding: clamp(13px, 2.2cqh, 22px) clamp(14px, 2.3cqw, 32px);
+  border-right: 2px solid color-mix(in srgb, var(--signature-accent) 80%, transparent);
+  background:
+    linear-gradient(90deg, transparent, rgba(2, 4, 4, 0.48) 22%, rgba(2, 4, 4, 0.78));
+  text-align: right;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-copy small {
+  justify-content: flex-end;
+}
+
+.motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-copy {
+  left: clamp(22px, 6%, 88px);
+  right: auto;
+  border-right: 0;
+  border-left: 2px solid color-mix(in srgb, var(--signature-accent) 80%, transparent);
+  background:
+    linear-gradient(90deg, rgba(2, 4, 4, 0.78), rgba(2, 4, 4, 0.48) 78%, transparent);
+  text-align: left;
+}
+
+.motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-copy small {
+  justify-content: flex-start;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-copy h3 {
+  font-size: clamp(26px, 4.8cqh, 56px);
+  line-height: 0.92;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-copy strong {
+  font-size: clamp(16px, 2.8cqh, 32px);
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-glyph {
+  right: clamp(12px, 2.4%, 34px);
+  top: 5%;
+  z-index: 3;
+  font-size: clamp(104px, 26cqh, 300px);
+  opacity: 0.24;
+}
+
+.motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-glyph {
+  left: clamp(12px, 2.4%, 34px);
+  right: auto;
+}
+
+.motion-system-v22 .has-signature-scene .ultimate-cinematic-timeline {
+  left: auto;
+  right: clamp(22px, 6%, 88px);
+  bottom: 12%;
+  width: min(42%, 520px);
+}
+
+.motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-timeline {
+  left: clamp(22px, 6%, 88px);
+  right: auto;
+}
+
+.motion-system-v22 .uses-battlefield-scene .ultimate-scene-art {
+  opacity: 0.38;
+  filter: saturate(0.72) contrast(1.08);
+}
+
+@keyframes v22-cinematic-shell {
+  0% {
+    opacity: 0;
+    transform: translate(-6%, -50%) scaleX(0.92);
+  }
+  10% {
+    opacity: 1;
+    transform: translate(0, -50%) scaleX(1);
+  }
+  78% {
+    opacity: 1;
+    transform: translate(0, -50%) scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(5%, -50%) scaleX(1.035);
+  }
+}
+
+@keyframes v22-scene-drift {
+  0%, 8% {
+    opacity: 0;
+    transform: translateX(-1.2%) scale(1.04);
+  }
+  20% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 1;
+    transform: translateX(0) scale(1.085);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(0.8%) scale(1.11);
+  }
+}
+
+@keyframes v22-scene-drift-enemy {
+  0%, 8% {
+    opacity: 0;
+    transform: scaleX(-1) translateX(-1.2%) scale(1.04);
+  }
+  20% {
+    opacity: 1;
+  }
+  78% {
+    opacity: 1;
+    transform: scaleX(-1) translateX(0) scale(1.085);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(-1) translateX(0.8%) scale(1.11);
+  }
+}
+
+@media (max-width: 1040px) {
+  .motion-system-v22 .live-combat-body {
+    grid-template-columns: minmax(0, 1fr) clamp(172px, 20vw, 210px);
+  }
+
+  .motion-system-v22 .combat-score {
+    grid-template-columns: 72px 42px 72px;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy {
+    right: 4%;
+    width: 45%;
+    min-width: 220px;
+  }
+
+  .motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-copy {
+    left: 4%;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-timeline {
+    right: 4%;
+    width: 45%;
+  }
+
+  .motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-timeline {
+    left: 4%;
+  }
+}
+
+@media (max-width: 760px) {
+  .motion-system-v22.live-combat {
+    padding: 4px;
+  }
+
+  .motion-system-v22 .live-combat-shell {
+    grid-template-rows: 50px minmax(0, 1fr);
+  }
+
+  .motion-system-v22 .live-combat-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .motion-system-v22 .combat-feed {
+    display: none;
+  }
+
+  .motion-system-v22 .live-combat-head {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 7px;
+    padding-inline: 8px;
+  }
+
+  .motion-system-v22 .live-combat-head > div:first-child small,
+  .motion-system-v22 .combat-score span,
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy em {
+    display: none;
+  }
+
+  .motion-system-v22 .combat-score {
+    display: flex;
+  }
+
+  .motion-system-v22 .combat-score em {
+    width: 32px;
+    height: 32px;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy {
+    right: 3%;
+    top: 20%;
+    width: 48%;
+    min-width: 0;
+    padding: 10px 12px;
+  }
+
+  .motion-system-v22 .has-signature-scene.side-enemy .ultimate-cinematic-copy {
+    left: 3%;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy h3 {
+    font-size: clamp(22px, 7cqh, 38px);
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy strong {
+    font-size: clamp(13px, 3.6cqh, 22px);
+  }
+}
+
+@media (max-height: 620px) {
+  .motion-system-v22.live-combat {
+    padding: 4px;
+  }
+
+  .motion-system-v22 .live-combat-shell {
+    grid-template-rows: 48px minmax(0, 1fr);
+  }
+
+  .motion-system-v22 .live-combat-head h2 {
+    font-size: 14px;
+  }
+
+  .motion-system-v22 .live-combat-head h2 i {
+    width: 24px;
+    height: 24px;
+  }
+
+  .motion-system-v22 .combat-feed {
+    grid-template-rows: 42px minmax(0, 1fr) 52px;
+  }
+
+  .motion-system-v22 .combat-feed li {
+    min-height: 30px;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy {
+    top: 18%;
+    padding-block: 9px;
+  }
+
+  .motion-system-v22 .has-signature-scene .ultimate-cinematic-copy em {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-system-v22 .ultimate-scene-art {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .motion-system-v22 .ultimate-cinematic.side-enemy .ultimate-scene-art {
+    transform: scaleX(-1);
+  }
+}
