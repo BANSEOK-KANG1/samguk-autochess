@@ -43,6 +43,11 @@ import {
   type FormationId,
 } from "./formation-config";
 import { CombatStage } from "./combat-stage";
+import {
+  COMBAT_SKILL_HOLD_MS,
+  COMBAT_TICK_MS,
+  type CombatSpeed,
+} from "./combat-timing";
 import { ModePanel } from "./mode-panel";
 import { heroPortraitStyle } from "./hero-portrait";
 import { heroCombatArtStyle } from "./hero-combat-art";
@@ -441,7 +446,7 @@ export default function Home() {
   );
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [battleResult, setBattleResult] = useState<CombatWinner | null>(null);
-  const [speed, setSpeed] = useState<1 | 2>(1);
+  const [speed, setSpeed] = useState<CombatSpeed>(1);
   const [introOpen, setIntroOpen] = useState(true);
   const [savedAvailable, setSavedAvailable] = useState(false);
   const currentTheme = BATTLEFIELD_BY_ID[theme];
@@ -556,14 +561,14 @@ export default function Home() {
           const now = Date.now();
           if (heldSkillId.current !== latestSkill.id) {
             heldSkillId.current = latestSkill.id;
-            skillHoldUntil.current = now + (speed === 1 ? 1480 : 820);
+            skillHoldUntil.current = now + COMBAT_SKILL_HOLD_MS[speed];
             return current;
           }
           if (now < skillHoldUntil.current) return current;
         }
         return advanceBattle(current);
       });
-    }, speed === 1 ? 780 : 420);
+    }, COMBAT_TICK_MS[speed]);
     return () => window.clearInterval(timer);
   }, [combat, speed]);
 
@@ -1057,7 +1062,7 @@ export default function Home() {
           <button className="intro-link" onClick={() => { setIntroOpen(false); setModeOpen(true); }}>
             난이도 · AI 수 · 진법 설정
           </button>
-          <span className="intro-version">PRE-ALPHA v0.2.1 · 파밍/조합전 순환</span>
+          <span className="intro-version">PRE-ALPHA v0.2.2 · 전투 속도 상향</span>
         </div>
       )}
       <div className="ink-map" aria-hidden="true" />

@@ -37,6 +37,12 @@ import {
 } from "./combat-terrain";
 import { isLiteShell } from "./platform";
 import { assetCssUrl } from "./asset-url";
+import {
+  COMBAT_CINEMATIC_MS,
+  COMBAT_SKILL_HOLD_MS,
+  COMBAT_SPEED_LABEL,
+  type CombatSpeed,
+} from "./combat-timing";
 
 const ROLE_MOTION_CLASS: Record<Role, string> = {
   군주: "role-lord",
@@ -156,7 +162,7 @@ export function CombatStage({
   theme: BattlefieldTheme;
   opponent: string;
   battleLabel: string;
-  speed: 1 | 2;
+  speed: CombatSpeed;
   result: CombatWinner | null;
   onToggleSpeed: () => void;
   onSkip: () => void;
@@ -221,7 +227,7 @@ export function CombatStage({
         current?.id === latestSkill.id ? null : current,
       );
       signatureTimer.current = null;
-    }, speed === 1 ? 1480 : 820);
+    }, COMBAT_SKILL_HOLD_MS[speed]);
   }, [speed, state.events]);
 
   useEffect(() => {
@@ -275,7 +281,7 @@ export function CombatStage({
       style={{
         "--terrain-image": assetCssUrl(battlefield.asset),
         "--terrain-accent": battlefield.accent,
-        "--cinematic-duration": speed === 1 ? "1220ms" : "620ms",
+        "--cinematic-duration": `${COMBAT_CINEMATIC_MS[speed]}ms`,
       } as React.CSSProperties}
     >
       <div className="live-combat-shell">
@@ -294,7 +300,7 @@ export function CombatStage({
           </div>
           <div className="combat-controls">
             <button onClick={onToggleSpeed} aria-label="전투 속도 변경">
-              ×{speed}
+              ×{COMBAT_SPEED_LABEL[speed]}
             </button>
             <button onClick={onSkip}>결과까지</button>
           </div>
