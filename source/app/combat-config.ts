@@ -1,8 +1,9 @@
 import type { Role } from "./game-data";
 
-export type GameMode = "single" | "versus";
+export type GameMode = "single" | "versus" | "practice";
 export type DifficultyId = "normal" | "heroic" | "legendary";
 export type TacticId = "assault" | "fortress" | "volley" | "sustain";
+export type AiRivalCount = 1 | 2 | 3;
 export type CombatArchetype =
   | "dealer"
   | "tank"
@@ -18,21 +19,44 @@ export const GAME_MODES: Record<
     hanja: string;
     eyebrow: string;
     description: string;
+    estimatedMinutes: string;
   }
 > = {
   single: {
-    label: "싱글 원정",
-    hanja: "원정",
-    eyebrow: "PVE CAMPAIGN",
-    description: "난이도에 맞춰 적의 성장률과 보상을 정하고 토벌전을 이어갑니다.",
+    label: "싱글 캠페인",
+    hanja: "캠페인",
+    eyebrow: "SOLO 2~4 SEATS",
+    description:
+      "당신 + AI 1~3명. 대진·체력·탈락·순위가 있는 한 판 오토체스입니다. 오프라인으로 완주합니다.",
+    estimatedMinutes: "15~25분",
   },
   versus: {
-    label: "군웅 대전",
-    hanja: "대전",
-    eyebrow: "AI VERSUS PRESEASON",
-    description: "동일 레벨의 경쟁 진형과 겨루며 승패에 따라 군웅 점수가 오르내립니다.",
+    label: "군웅 점수전",
+    hanja: "점수",
+    eyebrow: "AI RANKED PRESEASON",
+    description:
+      "캠페인과 동일 규칙에 승패 점수만 추가됩니다. 나중에 비동기 고스트 대전과 연결됩니다.",
+    estimatedMinutes: "15~25분",
+  },
+  practice: {
+    label: "연습 전투",
+    hanja: "연습",
+    eyebrow: "QUICK DRILL",
+    description: "저장 없이 1:1 AI 훈련만 반복합니다. 배치·시너지 실험용입니다.",
+    estimatedMinutes: "3~8분",
   },
 };
+
+export const AI_RIVAL_OPTIONS: {
+  count: AiRivalCount;
+  label: string;
+  seats: number;
+  blurb: string;
+}[] = [
+  { count: 1, label: "1 AI", seats: 2, blurb: "빠른 결전" },
+  { count: 2, label: "2 AI", seats: 3, blurb: "표준 한 판" },
+  { count: 3, label: "3 AI", seats: 4, blurb: "최대 4인 구조" },
+];
 
 export const DIFFICULTIES: Record<
   DifficultyId,

@@ -11,8 +11,6 @@ import {
   HERO_BY_ID,
   ROLE_EFFECTS,
   SHOP_ODDS,
-  STARTING_BENCH,
-  STARTING_BOARD,
   rangeLabelFor,
   type BattlefieldTheme,
   type Faction,
@@ -32,6 +30,7 @@ import {
   ROLE_ARCHETYPES,
   TACTICS,
   enemyTacticForSeed,
+  type AiRivalCount,
   type DifficultyId,
   type GameMode,
   type TacticId,
@@ -68,21 +67,37 @@ import {
   tryCombineItems,
   type EquippedItems,
 } from "./item-data";
-
-type Unit = {
-  uid: string;
-  heroId: string;
-  star: 1 | 2 | 3;
-  items: EquippedItems;
-};
+import {
+  BOARD_COLUMNS,
+  BOARD_POSITIONS,
+  BOARD_SIZE,
+  beginCombatRound,
+  boardToCombatInputs,
+  buildAiBoardInputs,
+  clearMatchSave,
+  createInitialBench,
+  createInitialBoard,
+  createMatchSnapshot,
+  createMatchState,
+  hasMatchSave,
+  humanPlayer,
+  loadMatch,
+  mergeRoster,
+  opponentForHuman,
+  practiceEnemyMeta,
+  rollShop,
+  saveMatch,
+  settleMatchRound,
+  snapshotFromPlayer,
+  updateHuman,
+  type MatchState,
+  type Unit,
+} from "./session";
 
 type Zone = "board" | "bench";
 type Selection = { zone: Zone; index: number } | null;
 type ShopKind = "heroes" | "items";
 
-const BOARD_COLUMNS = 7;
-const BOARD_SIZE = 28;
-const BOARD_POSITIONS = [10, 2, 3, 11, 4, 24];
 const turnIndexFor = (round: number, stage: number) =>
   (round - 1) * 5 + stage;
 const isItemShopTurn = (round: number, stage: number) =>
@@ -175,90 +190,6 @@ const makeUnit = (heroId: string, index: number): Unit => ({
   star: 1,
   items: emptyEquipment(),
 });
-
-const createInitialBoard = () => {
-  const board: (Unit | null)[] = Array.from({ length: BOARD_SIZE }, () => null);
-  STARTING_BOARD.forEach((heroId, index) => {
-    board[BOARD_POSITIONS[index]] = makeUnit(heroId, index);
-  });
-  return board;
-};
-
-const createInitialBench = () =>
-  Array.from({ length: 9 }, (_, index) =>
-    STARTING_BENCH[index] ? makeUnit(STARTING_BENCH[index], index + 20) : null,
-  );
-
-const rollCost = (level: number) => {
-  const odds = SHOP_ODDS[level] ?? SHOP_ODDS[9];
-  const roll = Math.random() * 100;
-  let cursor = 0;
-  for (let index = 0; index < odds.length; index += 1) {
-    cursor += odds[index];
-    if (roll <= cursor) return index + 1;
-  }
-  return 1;
-};
-
-const rollShop = (level: number) =>
-  Array.from({ length: 5 }, () => {
-    const cost = rollCost(level);
-    const candidates = HEROES.filter((hero) => hero.cost === cost);
-    return candidates[Math.floor(Math.random() * candidates.length)].id;
-  });
-
-const mergeRoster = (
-  boardInput: (Unit | null)[],
-  benchInput: (Unit | null)[],
-) => {
-  const board = [...boardInput];
-  const bench = [...benchInput];
-  let mergedName = "";
-  let keepMerging = true;
-  const returnedItems: string[] = [];
-
-  while (keepMerging) {
-    keepMerging = false;
-    for (const hero of HEROES) {
-      for (const star of [1, 2] as const) {
-        const matches: { zone: Zone; index: number }[] = [];
-        board.forEach((piece, index) => {
-          if (piece?.heroId === hero.id && piece.star === star) {
-            matches.push({ zone: "board", index });
-          }
-        });
-        bench.forEach((piece, index) => {
-          if (piece?.heroId === hero.id && piece.star === star) {
-            matches.push({ zone: "bench", index });
-          }
-        });
-        if (matches.length < 3) continue;
-
-        const [keeper, ...consumed] = matches.slice(0, 3);
-        const roster = keeper.zone === "board" ? board : bench;
-        const piece = roster[keeper.index];
-        if (!piece) continue;
-        roster[keeper.index] = {
-          ...piece,
-          star: (star + 1) as 2 | 3,
-          items: piece.items,
-        };
-        consumed.forEach((match) => {
-          const victim = (match.zone === "board" ? board : bench)[match.index];
-          if (victim) {
-            victim.items.forEach((itemId) => {
-              if (itemId) returnedItems.push(itemId);
-            });
-          }
-          (match.zone === "board" ? board : bench)[match.index] = null;
-        });
-        mergedName = `${hero.name} ${star + 1}성`;
-        keepMerging = true;
-      }
-    }
-  }
-  return { board, bench, mergedName, returnedItems };
-};
 
 function Stars({ star }: { star: Unit["star"] }) {
   return (
@@ -470,15 +401,13 @@ export default function Home() {
   const resultTimer = useRef<number | null>(null);
   const heldSkillId = useRef<string | null>(null);
   const skillHoldUntil = useRef(0);
-  const [board, setBoard] = useState<(Unit | null)[]>(createInitialBoard);
-  const [bench, setBench] = useState<(Unit | null)[]>(createInitialBench);
-  const [shop, setShop] = useState<(string | null)[]>([
-    "gan-ning",
-    "gan-ning",
-    "gan-ning",
-    "lu-bu",
-    "zhuge-liang",
-  ]);
+  const [match, setMatch] = useState<MatchState>(() =>
+    createMatchState({ mode: "single", difficulty: "heroic", aiCount: 2 }),
+  );
+  const [aiCount, setAiCount] = useState<AiRivalCount>(2);
+  const [board, setBoard] = useState<(Unit | null)[]>(() => createInitialBoard(1));
+  const [bench, setBench] = useState<(Unit | null)[]>(() => createInitialBench(1));
+  const [shop, setShop] = useState<(string | null)[]>(() => rollShop(6, 17));
   const [shopKind, setShopKind] = useState<ShopKind>("heroes");
   const [itemShop, setItemShop] = useState<(string | null)[]>(() =>
     rollItemShop(42),
@@ -486,12 +415,12 @@ export default function Home() {
   const [itemBag, setItemBag] = useState<string[]>([]);
   const [selection, setSelection] = useState<Selection>(null);
   const [gold, setGold] = useState(27);
-  const [health, setHealth] = useState(82);
+  const [health, setHealth] = useState(100);
   const [level, setLevel] = useState(6);
   const [xp, setXp] = useState(18);
-  const [round, setRound] = useState(3);
-  const [stage, setStage] = useState(2);
-  const [streak, setStreak] = useState(2);
+  const [round, setRound] = useState(1);
+  const [stage, setStage] = useState(1);
+  const [streak, setStreak] = useState(0);
   const [locked, setLocked] = useState(false);
   const [theme, setTheme] = useState<BattlefieldTheme>("평지");
   const [mode, setMode] = useState<GameMode>("single");
@@ -505,18 +434,111 @@ export default function Home() {
   const [catalogFaction, setCatalogFaction] = useState<Faction | "전체">("전체");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState(
-    "장수를 카드로 영입한 뒤, 전장에 2.5D로 배치하세요.",
+    "싱글 캠페인 · AI 라이벌과 대진하며 최후까지 남으세요.",
   );
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [battleResult, setBattleResult] = useState<CombatWinner | null>(null);
   const [speed, setSpeed] = useState<1 | 2>(1);
   const [introOpen, setIntroOpen] = useState(true);
+  const [savedAvailable, setSavedAvailable] = useState(false);
   const currentTheme = BATTLEFIELD_BY_ID[theme];
   const currentFormation = FORMATIONS[formation];
   const boardCount = board.filter(Boolean).length;
   const formationCount = formationActiveCount(board, formation);
   const formationTier = formationTierForCount(formation, formationCount);
   const combat = Boolean(battle);
+  const scout = opponentForHuman(match);
+  const campaignMode = mode === "single" || mode === "versus";
+
+  const applyHumanSnapshot = (next: MatchState) => {
+    const human = humanPlayer(next);
+    setBoard(human.board);
+    setBench(human.bench);
+    setShop(human.shop);
+    setShopKind(human.shopKind);
+    setItemShop(human.itemShop);
+    setItemBag(human.itemBag);
+    setGold(human.gold);
+    setHealth(human.health);
+    setLevel(human.level);
+    setXp(human.xp);
+    setStreak(human.streak);
+    setLocked(human.locked);
+    setTactic(human.tactic);
+    setFormation(human.formation);
+    setRound(next.round);
+    setStage(next.stage);
+    setTheme(next.theme);
+    setMode(next.mode);
+    setDifficulty(next.difficulty);
+    setAiCount(next.aiCount);
+    setRankPoints(next.rankPoints);
+    setNotice(next.notice);
+    setMatch(next);
+  };
+
+  const syncHumanIntoMatch = (base: MatchState = match): MatchState =>
+    updateHuman(
+      {
+        ...base,
+        mode,
+        difficulty,
+        aiCount,
+        rankPoints,
+      },
+      {
+        board,
+        bench,
+        shop,
+        shopKind,
+        itemShop,
+        itemBag,
+        gold,
+        health,
+        level,
+        xp,
+        streak,
+        locked,
+        tactic,
+        formation,
+      },
+    );
+
+  const startNewMatch = (nextMode: GameMode, rivals: AiRivalCount = aiCount) => {
+    clearMatchSave();
+    const created = createMatchState({
+      mode: nextMode,
+      difficulty,
+      aiCount: nextMode === "practice" ? 1 : rivals,
+      tactic,
+      formation,
+      theme: "평지",
+      seed: Date.now() % 1_000_000_000,
+      rankPoints,
+    });
+    applyHumanSnapshot(created);
+    setBattle(null);
+    setBattleResult(null);
+    setSelection(null);
+    setIntroOpen(false);
+    setSavedAvailable(false);
+  };
+
+  const continueMatch = () => {
+    const saved = loadMatch();
+    if (!saved) {
+      setNotice("저장된 캠페인이 없습니다.");
+      return;
+    }
+    applyHumanSnapshot(saved.match);
+    setBattle(null);
+    setBattleResult(null);
+    setIntroOpen(false);
+  };
+
+  useEffect(() => {
+    setSavedAvailable(hasMatchSave());
+  }, []);
 
   useEffect(() => {
     if (!combat) return;
@@ -553,59 +575,67 @@ export default function Home() {
     resultTimer.current = window.setTimeout(() => {
       setBattleResult(winner);
       resultTimer.current = window.setTimeout(() => {
-        const won = winner === "ally";
-        const draw = winner === "draw";
-        const interest = Math.min(5, Math.floor(gold / 10));
-        const streakGold = won
-          ? Math.min(3, Math.floor(Math.max(0, streak) / 2))
-          : 0;
-        setGold(
-          (value) =>
-            value + (won ? 6 : draw ? 4 : 3) + interest + streakGold,
-        );
-        setHealth((value) =>
-          Math.max(0, value - (winner === "enemy" ? 8 : 0)),
-        );
-        setStreak((value) =>
-          won
-            ? Math.max(1, value + 1)
-            : draw
-              ? 0
-              : Math.min(-1, value - 1),
-        );
-        setRankPoints((value) =>
-          mode === "versus"
-            ? Math.max(0, value + (won ? 26 : draw ? 2 : -18))
-            : value,
-        );
-        setRound((value) => (stage === 5 ? value + 1 : value));
-        setStage((value) => (value === 5 ? 1 : value + 1));
-        if (!locked) {
-          const upcomingStage = stage === 5 ? 1 : stage + 1;
-          const upcomingRound = stage === 5 ? round + 1 : round;
-          if (isItemShopTurn(upcomingRound, upcomingStage)) {
-            setShopKind("items");
-            setItemShop(rollItemShop(Date.now() + upcomingRound * 97));
-          } else {
-            setShopKind("heroes");
-            setShop(rollShop(level));
+        if (campaignMode) {
+          const synced = syncHumanIntoMatch();
+          const settled = settleMatchRound(synced, winner);
+          applyHumanSnapshot(settled);
+          saveMatch(settled);
+          setSavedAvailable(true);
+          setBoard((current) => snapBoardToPaths(current, settled.theme));
+        } else {
+          const won = winner === "ally";
+          const draw = winner === "draw";
+          const interest = Math.min(5, Math.floor(gold / 10));
+          const streakGold = won
+            ? Math.min(3, Math.floor(Math.max(0, streak) / 2))
+            : 0;
+          const reward = DIFFICULTIES[difficulty].rewardMultiplier;
+          setGold(
+            (value) =>
+              value +
+              Math.round((won ? 6 : draw ? 4 : 3) * reward) +
+              interest +
+              streakGold,
+          );
+          setHealth((value) =>
+            Math.max(0, value - (winner === "enemy" ? 8 : 0)),
+          );
+          setStreak((value) =>
+            won
+              ? Math.max(1, value + 1)
+              : draw
+                ? 0
+                : Math.min(-1, value - 1),
+          );
+          setRound((value) => (stage === 5 ? value + 1 : value));
+          setStage((value) => (value === 5 ? 1 : value + 1));
+          if (!locked) {
+            const upcomingStage = stage === 5 ? 1 : stage + 1;
+            const upcomingRound = stage === 5 ? round + 1 : round;
+            if (isItemShopTurn(upcomingRound, upcomingStage)) {
+              setShopKind("items");
+              setItemShop(rollItemShop(Date.now() + upcomingRound * 97));
+            } else {
+              setShopKind("heroes");
+              setShop(rollShop(level, Date.now() + upcomingRound));
+            }
           }
+          setNotice(
+            won
+              ? `승리 · 연습 보상 반영`
+              : draw
+                ? `무승부 · 연습 계속`
+                : `패배 · 체력 감소`,
+          );
+          setBoard((current) => snapBoardToPaths(current, theme));
         }
-        setNotice(
-          won
-            ? `승리 · 기본 6 + 이자 ${interest} + 연승 ${streakGold} 획득`
-            : draw
-              ? `무승부 · 금화 ${4 + interest} 획득`
-              : `패배 · 체력 8 감소, 금화 ${3 + interest} 획득`,
-        );
         setBattle(null);
         setBattleResult(null);
         setSpeed(1);
-        setBoard((current) => snapBoardToPaths(current, theme));
         resultTimer.current = null;
       }, 2100);
     }, 0);
-  }, [battle, battleResult, gold, level, locked, mode, stage, streak, theme]);
+  }, [battle, battleResult, campaignMode, difficulty, gold, level, locked, match, mode, round, stage, streak, theme, board, bench, shop, shopKind, itemShop, itemBag, health, xp, tactic, formation, aiCount, rankPoints]);
 
   useEffect(
     () => () => {
@@ -851,7 +881,7 @@ export default function Home() {
       setItemShop(rollItemShop(Date.now()));
       setNotice("아이템 상점 후보를 새로 불러왔습니다.");
     } else {
-      setShop(rollShop(level));
+      setShop(rollShop(level, Date.now()));
       setNotice("장수 영입 후보를 새로 불러왔습니다.");
     }
   };
@@ -889,26 +919,67 @@ export default function Home() {
 
   const startBattle = () => {
     if (!boardCount) return setNotice("전장에 장수를 먼저 배치하세요.");
-    const allies = board.flatMap((piece, boardIndex) =>
-      piece
-        ? [
-            {
-              uid: piece.uid,
-              heroId: piece.heroId,
-              star: piece.star,
-              boardIndex,
-              items: piece.items,
-            },
-          ]
-        : [],
-    );
+    if (campaignMode && match.phase === "finished") {
+      setNotice("캠페인이 끝났습니다. 인트로에서 새 게임을 시작하세요.");
+      setIntroOpen(true);
+      return;
+    }
+    const allies = boardToCombatInputs(board);
     if (allies.length !== boardCount) {
       setNotice("배치 인원과 출전 명단이 일치하지 않습니다. 다시 배치해 주세요.");
       return;
     }
+
+    if (campaignMode) {
+      const synced = syncHumanIntoMatch();
+      const combatMatch = beginCombatRound(synced);
+      const foe = opponentForHuman(combatMatch);
+      if (!foe) {
+        const settled = settleMatchRound(combatMatch, "draw");
+        applyHumanSnapshot(settled);
+        saveMatch(settled);
+        setSavedAvailable(true);
+        setNotice(settled.notice || "부전승 · 라운드 보상 반영");
+        return;
+      }
+      const seed =
+        combatMatch.seed + combatMatch.round * 137 + combatMatch.stage * 31;
+      const enemyUnits =
+        foe.kind === "ai"
+          ? buildAiBoardInputs(foe, combatMatch, seed + 11)
+          : boardToCombatInputs(foe.board);
+      setMatch(combatMatch);
+      setTheme(combatMatch.theme);
+      setRound(combatMatch.round);
+      setStage(combatMatch.stage);
+      setBattleResult(null);
+      setBattle(
+        createBattleState({
+          allies,
+          enemies: enemyUnits,
+          enemyCount: enemyUnits.length,
+          level,
+          theme: combatMatch.theme,
+          seed,
+          allyTactic: tactic,
+          enemyTactic: foe.tactic ?? enemyTacticForSeed(seed),
+          allyFormation: formation,
+          enemyFormation: foe.formation ?? enemyFormationForSeed(seed),
+          enemyScale: 1,
+        }),
+      );
+      createMatchSnapshot(combatMatch, [
+        snapshotFromPlayer(humanPlayer(combatMatch), allies),
+        snapshotFromPlayer(foe, enemyUnits),
+      ]);
+      setNotice(`${foe.name}과 교전 · 다른 AI 대진은 자동 처리됩니다`);
+      return;
+    }
+
     const candidates = BATTLEFIELD_THEMES.filter((item) => item.id !== theme);
     const nextTheme = candidates[Math.floor(Math.random() * candidates.length)].id;
     const seed = Math.floor(Date.now() / 1000) + round * 137 + stage * 31;
+    const meta = practiceEnemyMeta({ difficulty }, seed);
     setTheme(nextTheme);
     setBattleResult(null);
     setBattle(
@@ -919,15 +990,14 @@ export default function Home() {
         theme: nextTheme,
         seed,
         allyTactic: tactic,
-        enemyTactic: enemyTacticForSeed(seed),
+        enemyTactic: meta.enemyTactic,
         allyFormation: formation,
-        enemyFormation: enemyFormationForSeed(seed),
-        enemyScale:
-          mode === "single" ? DIFFICULTIES[difficulty].enemyScale : 1.08,
-        enemyLeaderStar: difficulty === "legendary" ? 2 : 1,
+        enemyFormation: meta.enemyFormation,
+        enemyScale: meta.enemyScale,
+        enemyLeaderStar: meta.enemyLeaderStar,
       }),
     );
-    setNotice(`출전 ${allies.length}명 · 전투 시작`);
+    setNotice(`연습 출전 ${allies.length}명 · 전투 시작`);
   };
 
   const filteredHeroes = HEROES.filter(
@@ -948,11 +1018,24 @@ export default function Home() {
         <div className="intro-screen" role="dialog" aria-label="게임 시작">
           <span className="intro-emblem">삼</span>
           <h1>삼국지 오토체스</h1>
-          <p>백 명의 장수 · 진법과 지형이 얽히는 자동 전투</p>
-          <button className="intro-start" onClick={() => setIntroOpen(false)}>
-            전투 준비 시작
+          <p>오프라인 싱글 캠페인 · AI 1~3명 · 최대 4석</p>
+          <div className="intro-actions">
+            {savedAvailable && (
+              <button className="intro-start" onClick={continueMatch}>
+                이어하기
+              </button>
+            )}
+            <button className="intro-start" onClick={() => startNewMatch("single", aiCount)}>
+              새 캠페인
+            </button>
+            <button className="intro-secondary" onClick={() => startNewMatch("practice", 1)}>
+              연습 전투
+            </button>
+          </div>
+          <button className="intro-link" onClick={() => { setIntroOpen(false); setModeOpen(true); }}>
+            난이도 · AI 수 · 진법 설정
           </button>
-          <span className="intro-version">PRE-ALPHA v0.1.9</span>
+          <span className="intro-version">PRE-ALPHA v0.2.0 · 로컬 저장</span>
         </div>
       )}
       <div className="ink-map" aria-hidden="true" />
@@ -1134,7 +1217,35 @@ export default function Home() {
           </section>
 
           <aside className="round-panel panel">
-            <div className="panel-heading"><span>{selectedHero ? "장수 상세" : "다음 상대"}</span><small className="ready">준비</small></div>
+            <div className="panel-heading"><span>{selectedHero ? "장수 상세" : "전장 상황"}</span><small className="ready">{campaignMode ? `${match.players.length}석` : "연습"}</small></div>
+            {campaignMode && (
+              <div className="match-standings">
+                <span className="match-standings-title">대진 · 체력</span>
+                {[...match.players]
+                  .sort((a, b) => Number(a.eliminated) - Number(b.eliminated) || b.health - a.health)
+                  .map((player) => {
+                    const isFoe = scout?.id === player.id;
+                    const isSelf = player.id === match.humanId;
+                    return (
+                      <div
+                        className={`match-standing ${isSelf ? "is-self" : ""} ${isFoe ? "is-foe" : ""} ${player.eliminated ? "is-out" : ""}`}
+                        key={player.id}
+                      >
+                        <b>{player.name}</b>
+                        <em>♥ {player.health}</em>
+                        <small>
+                          {player.eliminated
+                            ? `${player.placement ?? "-"}위 탈락`
+                            : `${player.wins}승 ${player.losses}패`}
+                        </small>
+                      </div>
+                    );
+                  })}
+                {scout && (
+                  <p className="match-scout">다음 상대 · {scout.name} · {FORMATIONS[scout.formation].label}</p>
+                )}
+              </div>
+            )}
             {selectedHero && selectedPiece ? (
               <div className="selected-detail">
                 <div className="detail-portrait" style={{ ...heroPortraitStyle(selectedHero), "--faction": FACTION_COLOR[selectedHero.faction] } as React.CSSProperties} />
@@ -1305,8 +1416,8 @@ export default function Home() {
             )}
           </div>
           <div className="battle-action">
-            <span>{round}-{stage} · {FORMATIONS[formation].label} {formationTier}단계<br />전투 직전 전장 테마가 무작위로 공개됩니다.</span>
-            <button onClick={startBattle} disabled={combat}><small>자동 전투</small>전투 시작</button>
+            <span>{round}-{stage} · {FORMATIONS[formation].label} {formationTier}단계<br />{campaignMode ? `캠페인 · AI ${aiCount} · 보상 ×${DIFFICULTIES[difficulty].rewardMultiplier}` : "연습 전투 · 저장 없음"}</span>
+            <button onClick={startBattle} disabled={combat || (campaignMode && match.phase === "finished")}><small>자동 전투</small>전투 시작</button>
             <p>이자 +{Math.min(5, Math.floor(gold / 10))} · 연승 보너스 +{Math.min(3, Math.floor(Math.max(0, streak) / 2))}</p>
           </div>
         </section>
@@ -1316,8 +1427,8 @@ export default function Home() {
         <CombatStage
           state={battle}
           theme={battle.theme}
-          opponent={mode === "single" ? "호로관 선봉대" : "군웅 경쟁 진형"}
-          battleLabel={`${round}-${stage} 자동 교전`}
+          opponent={scout?.name ?? (mode === "practice" ? "연습 상대" : "AI 라이벌")}
+          battleLabel={`${round}-${stage} ${campaignMode ? "캠페인" : "연습"} 교전`}
           speed={speed}
           result={battleResult}
           onToggleSpeed={() => setSpeed((value) => value === 1 ? 2 : 1)}
@@ -1329,11 +1440,13 @@ export default function Home() {
         <ModePanel
           mode={mode}
           difficulty={difficulty}
+          aiCount={aiCount}
           tactic={tactic}
           formation={formation}
           rankPoints={rankPoints}
           onModeChange={setMode}
           onDifficultyChange={setDifficulty}
+          onAiCountChange={setAiCount}
           onTacticChange={setTactic}
           onFormationChange={setFormation}
           onClose={() => setModeOpen(false)}

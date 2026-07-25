@@ -574,6 +574,7 @@ export const createBattleState = ({
   enemyFormation = "bongsi",
   enemyScale = 1,
   enemyLeaderStar = 1,
+  enemies: enemyOverrides,
 }: {
   allies: BoardCombatInput[];
   enemyCount: number;
@@ -586,14 +587,18 @@ export const createBattleState = ({
   enemyFormation?: FormationId;
   enemyScale?: number;
   enemyLeaderStar?: 1 | 2;
+  /** When provided, skip procedural AI generation (PvP / ghost boards). */
+  enemies?: BoardCombatInput[];
 }): BattleState => {
-  const enemies = buildEnemyInputs(
-    enemyCount,
-    level,
-    seed,
-    enemyLeaderStar,
-    enemyFormation,
-  );
+  const enemies = enemyOverrides?.length
+    ? { inputs: enemyOverrides, seed }
+    : buildEnemyInputs(
+        enemyCount,
+        level,
+        seed,
+        enemyLeaderStar,
+        enemyFormation,
+      );
   const allyFormationCount = FORMATIONS[allyFormation].cells.filter((index) =>
     allies.some((piece) => piece.boardIndex === index),
   ).length;
