@@ -14501,11 +14501,8 @@ button {
   pointer-events: none;
   background:
     linear-gradient(90deg, rgba(4, 7, 6, 0.35), transparent 18% 82%, rgba(4, 7, 6, 0.28)),
-    repeating-linear-gradient(
-      180deg,
-      transparent 0 18px,
-      rgba(255, 255, 255, 0.015) 18px 19px
-    );
+    linear-gradient(180deg, rgba(6, 9, 8, 0.12), rgba(4, 6, 5, 0.42)),
+    var(--terrain-image) center 48% / cover no-repeat;
 }
 
 .board.prep-stage .board-slot {
@@ -15286,6 +15283,31 @@ html.android-shell .combat-unit-name {
 
 html.android-shell .combat-unit-name small {
   display: none !important;
+}
+
+html.android-shell .board.prep-stage,
+html.android-shell .combat-arena {
+  background-size: cover !important;
+  background-repeat: no-repeat !important;
+  background-position: center 48% !important;
+}
+
+html.android-shell .board-terrain-layer {
+  opacity: 1 !important;
+  background:
+    linear-gradient(180deg, rgba(6, 9, 8, 0.16), rgba(4, 6, 5, 0.4)),
+    var(--terrain-image) center 48% / cover no-repeat !important;
+}
+
+html.android-shell .live-combat::before {
+  opacity: 0.35 !important;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.45), transparent 24% 76%, rgba(0, 0, 0, 0.45)),
+    var(--terrain-image) center / cover no-repeat !important;
+}
+
+html.android-shell .combat-cells {
+  opacity: 0.55 !important;
 }
 
 html.android-shell .board-figurine .figurine-body {

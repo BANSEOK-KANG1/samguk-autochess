@@ -56,6 +56,7 @@ import {
   COMBAT_TERRAIN_META,
   combatTerrainCellAt,
 } from "./combat-terrain";
+import { assetCssUrl } from "./asset-url";
 import {
   ITEM_BY_ID,
   ITEM_KIND_LABEL,
@@ -939,7 +940,7 @@ export default function Home() {
     <main
       className={`game-root terrain-${currentTheme.slug}`}
       style={{
-        "--terrain-image": `url('${currentTheme.asset}')`,
+        "--terrain-image": assetCssUrl(currentTheme.asset),
         "--terrain-accent": currentTheme.accent,
       } as React.CSSProperties}
     >
@@ -1032,8 +1033,12 @@ export default function Home() {
             <div
               className={`board prep-stage terrain-${currentTheme.slug}`}
               style={{
-                "--terrain-image": `url('${currentTheme.asset}')`,
+                "--terrain-image": assetCssUrl(currentTheme.asset),
                 "--terrain-accent": currentTheme.accent,
+                backgroundImage: `linear-gradient(180deg, rgba(6, 9, 8, 0.18), rgba(4, 6, 5, 0.55)), ${assetCssUrl(currentTheme.asset)}`,
+                backgroundSize: "cover",
+                backgroundPosition: "center 48%",
+                backgroundRepeat: "no-repeat",
               } as React.CSSProperties}
             >
               <div className="board-terrain-layer" aria-hidden="true" />

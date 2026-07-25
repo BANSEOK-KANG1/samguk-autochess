@@ -8,15 +8,15 @@ export type HeroUltimateArt = {
 
 const HERO_ULTIMATE_ART: Partial<Record<Hero["id"], HeroUltimateArt>> = {
   "cao-cao": {
-    src: "./ultimate-scenes/cao-cao-ultimate-v22.webp",
+    src: "/ultimate-scenes/cao-cao-ultimate-v22.webp",
     focus: "28% center",
   },
   "guan-yu": {
-    src: "./ultimate-scenes/guan-yu-ultimate-v22.webp",
+    src: "/ultimate-scenes/guan-yu-ultimate-v22.webp",
     focus: "30% center",
   },
   "zhou-yu": {
-    src: "./ultimate-scenes/zhou-yu-ultimate-v22.webp",
+    src: "/ultimate-scenes/zhou-yu-ultimate-v22.webp",
     focus: "32% center",
   },
 };

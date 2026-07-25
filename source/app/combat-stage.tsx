@@ -36,6 +36,7 @@ import {
   terrainRulesForTheme,
 } from "./combat-terrain";
 import { isLiteShell } from "./platform";
+import { assetCssUrl } from "./asset-url";
 
 const ROLE_MOTION_CLASS: Record<Role, string> = {
   군주: "role-lord",
@@ -272,7 +273,7 @@ export function CombatStage({
       aria-modal="true"
       aria-label={`${opponent} 자동 전투`}
       style={{
-        "--terrain-image": `url('${battlefield.asset}')`,
+        "--terrain-image": assetCssUrl(battlefield.asset),
         "--terrain-accent": battlefield.accent,
         "--cinematic-duration": speed === 1 ? "1220ms" : "620ms",
       } as React.CSSProperties}
@@ -302,6 +303,12 @@ export function CombatStage({
         <div className="live-combat-body">
           <div
             className={`combat-arena ${signatureMoment ? "ultimate-active" : ""}`}
+            style={{
+              backgroundImage: `linear-gradient(180deg, rgba(5, 8, 7, 0.28), rgba(3, 5, 4, 0.55)), ${assetCssUrl(battlefield.asset)}`,
+              backgroundSize: "cover",
+              backgroundPosition: "center 46%",
+              backgroundRepeat: "no-repeat",
+            }}
           >
             {!lite && (
               <>
@@ -770,9 +777,9 @@ export function CombatStage({
                     {
                       "--signature": signatureIdentity.color,
                       "--signature-accent": signatureIdentity.accent,
-                      "--ultimate-scene-image": `url('${
-                        signatureScene?.src ?? battlefield.asset
-                      }')`,
+                      "--ultimate-scene-image": assetCssUrl(
+                        signatureScene?.src ?? battlefield.asset,
+                      ),
                       "--ultimate-scene-focus":
                         signatureScene?.focus ?? "center center",
                     } as React.CSSProperties

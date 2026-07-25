@@ -4,6 +4,7 @@ import {
   BATTLEFIELD_BY_ID,
   HERO_BY_ID,
 } from "./game-data";
+import { assetCssUrl } from "./asset-url";
 import {
   FORMATION_META,
   TACTICS,
@@ -104,7 +105,7 @@ export function ArmyStage({
       aria-label={`${state.theme} 병력 자동전투`}
       style={
         {
-          "--terrain-image": `url('${battlefield.asset}')`,
+          "--terrain-image": assetCssUrl(battlefield.asset),
           "--terrain-accent": battlefield.accent,
         } as React.CSSProperties
       }
