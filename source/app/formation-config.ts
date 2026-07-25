@@ -34,7 +34,7 @@ export type FormationRule = {
 export const FORMATIONS: Record<FormationId, FormationRule> = {
   anhaeng: {
     label: "안행진",
-    hanja: "雁",
+    hanja: "안",
     subtitle: "기러기 날개",
     description:
       "양익을 비스듬히 펼쳐 원거리 장수가 서로의 사각을 보완합니다.",
@@ -59,7 +59,7 @@ export const FORMATIONS: Record<FormationId, FormationRule> = {
   },
   bongsi: {
     label: "봉시진",
-    hanja: "鋒",
+    hanja: "봉",
     subtitle: "화살촉 돌파",
     description:
       "중앙 선봉을 화살촉처럼 세워 한 지점을 빠르게 무너뜨립니다.",
@@ -84,7 +84,7 @@ export const FORMATIONS: Record<FormationId, FormationRule> = {
   },
   hakik: {
     label: "학익진",
-    hanja: "鶴",
+    hanja: "학",
     subtitle: "쌍익 포위",
     description:
       "좌우 날개를 넓게 벌려 측면 공격과 책략 연계를 강화합니다.",
@@ -109,7 +109,7 @@ export const FORMATIONS: Record<FormationId, FormationRule> = {
   },
   eorin: {
     label: "어린진",
-    hanja: "鱗",
+    hanja: "비",
     subtitle: "비늘 중첩",
     description:
       "병력을 비늘처럼 겹쳐 전열과 후열이 피해를 나누어 받습니다.",
@@ -134,7 +134,7 @@ export const FORMATIONS: Record<FormationId, FormationRule> = {
   },
   bangwon: {
     label: "방원진",
-    hanja: "圓",
+    hanja: "원",
     subtitle: "사방 수비",
     description:
       "외곽이 중앙을 감싸 지휘관과 지원 장수의 생존을 보장합니다.",
@@ -159,7 +159,7 @@ export const FORMATIONS: Record<FormationId, FormationRule> = {
   },
   jangsa: {
     label: "장사진",
-    hanja: "蛇",
+    hanja: "사",
     subtitle: "긴 뱀의 흐름",
     description:
       "세로로 이어진 병력이 앞뒤를 바꾸며 빠르게 전장을 가릅니다.",

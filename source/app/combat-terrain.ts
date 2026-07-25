@@ -43,37 +43,37 @@ export const COMBAT_TERRAIN_META: Record<
 > = {
   ground: {
     label: "통로",
-    hanja: "道",
+    hanja: "길",
     shortRule: "이동·공격 가능",
   },
   high: {
     label: "고지 길",
-    hanja: "高",
+    hanja: "고",
     shortRule: "공격 +10% · 이동 가능",
   },
   choke: {
     label: "협로",
-    hanja: "隘",
+    hanja: "협",
     shortRule: "방어 +12% · 좁은 길",
   },
   rough: {
     label: "험로",
-    hanja: "險",
+    hanja: "험",
     shortRule: "이동에 1행동 추가",
   },
   cover: {
     label: "밀림",
-    hanja: "林",
+    hanja: "숲",
     shortRule: "진입·공격 불가",
   },
   water: {
     label: "수역",
-    hanja: "水",
+    hanja: "물",
     shortRule: "진입·공격 불가",
   },
   cliff: {
     label: "낭떠러지",
-    hanja: "崖",
+    hanja: "낭",
     shortRule: "진입·공격 불가",
   },
 };

@@ -68,7 +68,7 @@ export function ModePanel({
       <div className="mode-panel">
         <header className="mode-panel-head">
           <div>
-            <small>戰略本營 · BATTLE SETUP</small>
+            <small>전쟁 본부 · 출전 설정</small>
             <h2>전쟁 방식과 출전 전술</h2>
             <p>전투 전에 상대의 성장 규칙과 우리 진형의 행동 방향을 결정합니다.</p>
           </div>

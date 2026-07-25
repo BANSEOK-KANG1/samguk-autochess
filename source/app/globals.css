@@ -348,17 +348,23 @@ button {
 .red-seal {
   display: grid;
   place-items: center;
-  width: 39px;
-  height: 39px;
+  width: 42px;
+  height: 42px;
   border: 2px solid #a83c31;
-  color: #b8483b;
-  font-family: serif;
-  font-size: 13px;
+  color: #d45a4a;
+  font-family: "Nanum Myeongjo", "Batang", serif;
+  font-size: 14px;
   font-weight: 900;
-  line-height: 1.05;
+  line-height: 1;
   text-align: center;
+  letter-spacing: -0.06em;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255, 180, 160, 0.18), transparent 55%),
+    rgba(90, 22, 18, 0.55);
   transform: rotate(-2deg);
-  box-shadow: inset 0 0 0 2px rgba(168, 60, 49, 0.2);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 210, 180, 0.12),
+    inset 0 0 0 2px rgba(168, 60, 49, 0.2);
 }
 
 .prototype-tag {
@@ -625,7 +631,7 @@ button {
 }
 
 .synergy-tip::before {
-  content: "策";
+  content: "책";
   position: absolute;
   left: 14px;
   top: 17px;
@@ -1625,8 +1631,9 @@ button {
   height: 29px;
   background: color-mix(in srgb, var(--faction) 82%, #121212);
   color: #f0dfbb;
-  font-family: "Batang", serif;
-  font-size: 13px;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  font-size: 12px;
+  font-weight: 800;
   clip-path: polygon(50% 0, 100% 20%, 88% 82%, 50% 100%, 12% 82%, 0 20%);
 }
 
@@ -2522,10 +2529,14 @@ button {
 .combat-side-label span {
   display: grid;
   place-items: center;
-  width: 22px;
+  min-width: 28px;
   height: 22px;
+  padding: 0 6px;
   border: 1px solid currentColor;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
   font-size: 11px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
 }
 
 .combat-side-label.enemy span {
@@ -12475,7 +12486,7 @@ button {
 }
 
 .banner-selector > button.selected::after {
-  content: "選";
+  content: "선택";
   position: absolute;
   right: 5px;
   top: 5px;
@@ -14976,16 +14987,18 @@ button {
 .trait-icons > i {
   display: grid;
   place-items: center;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 3px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
   border: 1px solid color-mix(in srgb, var(--trait-tone, #c4a574) 55%, transparent);
-  background: rgba(8, 10, 9, 0.82);
+  background: rgba(8, 10, 9, 0.88);
   color: var(--trait-tone, #e8d5a3);
-  font-size: 9px;
+  font-size: 10px;
   font-style: normal;
+  font-weight: 700;
   line-height: 1;
-  border-radius: 3px;
+  border-radius: 4px;
+  letter-spacing: -0.04em;
 }
 .trait-icons-figurine {
   position: absolute;
@@ -15071,7 +15084,10 @@ button {
 }
 .live-combat .combat-midline span {
   writing-mode: horizontal-tb;
-  letter-spacing: 0.35em;
+  font-family: "Pretendard", "Noto Sans KR", sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 .live-combat .combat-side-label.enemy {
   top: 10px;
@@ -15160,19 +15176,29 @@ button {
   outline-offset: -1px;
 }
 
-/* Android / narrow viewport: scale desktop board to fit */
+/* Android shell: letterbox + scale fixed 1180×720 design into device */
 .android-stage {
+  display: grid;
+  place-items: center;
   width: 100vw;
   height: 100dvh;
+  height: 100svh;
   overflow: hidden;
-  background: #0b0c0b;
+  background: #070807;
   touch-action: manipulation;
+}
+
+.android-stage-frame {
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #0b0c0b;
+  box-shadow: 0 0 0 1px rgba(197, 162, 92, 0.18);
 }
 
 .android-stage-inner {
   width: 1180px;
   height: 720px;
-  transform: scale(var(--app-scale, 1));
   transform-origin: top left;
   will-change: transform;
 }
@@ -15181,8 +15207,28 @@ html.android-shell,
 html.android-shell body {
   width: 100%;
   height: 100%;
+  margin: 0;
   overflow: hidden;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
+  touch-action: manipulation;
+}
+
+html.android-shell .game-root {
+  width: 1180px;
+  min-width: 1180px;
+  height: 720px;
+  min-height: 720px;
+  max-height: 720px;
+}
+
+html.android-shell .game-frame {
+  height: 720px;
+  min-height: 720px;
+  max-height: 720px;
+}
+
+html.android-shell .ink-map {
+  position: absolute;
 }

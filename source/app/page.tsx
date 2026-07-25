@@ -87,10 +87,10 @@ const turnIndexFor = (round: number, stage: number) =>
 const isItemShopTurn = (round: number, stage: number) =>
   turnIndexFor(round, stage) % 3 === 0;
 const RANKS = [
-  { name: "최전열", mark: "鋒", hint: "수호·용장·기병" },
-  { name: "전열", mark: "前", hint: "근접 장수" },
-  { name: "후열", mark: "後", hint: "책사·궁수" },
-  { name: "최후열", mark: "陣", hint: "지원·원거리" },
+  { name: "최전열", mark: "1", hint: "수호·용장·기병" },
+  { name: "전열", mark: "2", hint: "근접 장수" },
+  { name: "후열", mark: "3", hint: "책사·궁수" },
+  { name: "최후열", mark: "4", hint: "지원·원거리" },
 ] as const;
 
 const prepTerrainFor = (theme: BattlefieldTheme, boardIndex: number) => {
@@ -380,13 +380,13 @@ function UnitPiece({
         ))}
       </span>
       {terrainReady && (
-        <span className="figurine-affinity">{BATTLEFIELD_BY_ID[theme].hanja}</span>
+        <span className="figurine-affinity">{theme}</span>
       )}
       <Stars star={piece.star} />
       {(piece.items[0] || piece.items[1]) && (
         <span className="figurine-items" aria-hidden="true">
           {piece.items.filter(Boolean).map((itemId) => (
-            <i key={itemId}>{ITEM_BY_ID[itemId!]?.hanja ?? "器"}</i>
+            <i key={itemId}>{ITEM_BY_ID[itemId!]?.glyph ?? "템"}</i>
           ))}
         </span>
       )}
@@ -417,7 +417,7 @@ function ShopCard({
       <span className="shop-portrait" style={heroPortraitStyle(hero)} />
       <span className="shop-gradient" />
       <span className={`shop-role-mark archetype-${role.id}`}>{role.glyph}</span>
-      <span className="shop-faction">{hero.hanja.slice(0, 1)}</span>
+      <span className="shop-faction">{hero.faction === "기타" ? "군" : hero.faction}</span>
       <span className="shop-info">
         <strong>{hero.name}</strong>
         <small>
@@ -448,7 +448,7 @@ function ItemShopCard({
     >
       <span className="item-glyph-plate" aria-hidden="true">
         <b>{item.glyph}</b>
-        <i>{item.hanja}</i>
+        <i>{ITEM_KIND_LABEL[item.kind]}</i>
       </span>
       <span className="shop-info">
         <strong>{item.name}</strong>
@@ -946,15 +946,15 @@ export default function Home() {
       <div className={`game-frame ${combat ? "game-frame--combat" : ""}`}>
         <header className="top-bar">
           <div className="brand">
-            <span className="red-seal">三國<br />志</span>
+            <span className="red-seal">삼국</span>
             <strong className="brand-title">삼국지 오토체스</strong>
-            <span className="prototype-tag">PRE-ALPHA · AUTO BATTLE LAB</span>
+            <span className="prototype-tag">프리알파 · 자동전투</span>
           </div>
           <div className="player-stats">
             <span><i className="heart">♥</i><small>체력</small><strong>{health}</strong></span>
             <span><i>●</i><small>금화</small><strong>{gold}</strong></span>
-            <span><i>令</i><small>레벨</small><strong>{level}</strong></span>
-            <span><i>連</i><small>연승</small><strong>{Math.max(0, streak)}</strong></span>
+            <span><i>Lv</i><small>레벨</small><strong>{level}</strong></span>
+            <span><i>연</i><small>연승</small><strong>{Math.max(0, streak)}</strong></span>
           </div>
           <nav className="top-actions">
             <button onClick={() => setArtLabOpen(true)}>3D 아트</button>
@@ -983,7 +983,7 @@ export default function Home() {
               })}
               {bonds.map(([bond, count]) => (
                 <div className="synergy-row active" key={bond}>
-                  <span className="bond-badge">緣</span>
+                  <span className="bond-badge">연</span>
                   <span className="synergy-copy">
                     <strong>{bond} <em>{count}</em></strong>
                     <SynergyPips count={count} tiers={BOND_RULES[bond].tiers} color="#c79c54" />
@@ -1004,7 +1004,7 @@ export default function Home() {
             </div>
             <div className="synergy-tip">
               <b>{currentFormation.label} · {formationTier}단계</b>
-              빛나는 {currentFormation.hanja} 칸에 장수를 배치하면 역할별 진형 보너스가 적용됩니다.
+              빛나는 <b>{currentFormation.label}</b> 칸에 장수를 배치하면 역할별 진형 보너스가 적용됩니다.
             </div>
           </aside>
 
@@ -1012,7 +1012,7 @@ export default function Home() {
             <div className="battlefield-top">
               <span className="phase">{round}-{stage} · 준비 단계</span>
               <div className="terrain-title" style={{ "--terrain-accent": currentTheme.accent } as React.CSSProperties}>
-                <span>{currentTheme.hanja}</span>
+                <span>{theme}</span>
                 <h1>군웅의 전장<small>{theme} · {currentTheme.subtitle}</small></h1>
               </div>
               <span className="timer">배치 7×4 · 전투 7×8 · {boardCount}/{level}</span>
@@ -1032,7 +1032,7 @@ export default function Home() {
                 style={{ "--formation": currentFormation.color } as React.CSSProperties}
                 onClick={() => setModeOpen(true)}
               >
-                <i>{currentFormation.hanja}</i>
+                <i>{currentFormation.label.slice(0, 1)}</i>
                 <span><small>출전 진법</small><strong>{currentFormation.label}</strong><em>{formationCount}명 · {formationTier}단계</em></span>
                 <b>변경</b>
               </button>
@@ -1055,8 +1055,8 @@ export default function Home() {
                     onDrop={(event) => dropUnit(event, "board", index)}
                     title={`${COMBAT_TERRAIN_META[terrainCell.kind].label} · ${COMBAT_TERRAIN_META[terrainCell.kind].shortRule}`}
                   >
-                    <span className="slot-mark">{formationCell ? currentFormation.hanja : RANKS[row].mark}</span>
-                    {coreCell && <span className="formation-core-mark">核</span>}
+                    <span className="slot-mark">{formationCell ? currentFormation.label.slice(0, 1) : RANKS[row].mark}</span>
+                    {coreCell && <span className="formation-core-mark">핵</span>}
                     {terrainCell.kind !== "ground" && (
                       <span className="slot-terrain-badge">
                         <i>{COMBAT_TERRAIN_META[terrainCell.kind].hanja}</i>
@@ -1080,9 +1080,9 @@ export default function Home() {
                       >
                         {terrainCell.walkable
                           ? formationCell
-                            ? currentFormation.hanja
+                            ? currentFormation.label.slice(0, 1)
                             : "+"
-                          : COMBAT_TERRAIN_META[terrainCell.kind].hanja}
+                          : COMBAT_TERRAIN_META[terrainCell.kind].label.slice(0, 1)}
                       </button>
                     )}
                   </div>
@@ -1121,7 +1121,7 @@ export default function Home() {
             {selectedHero && selectedPiece ? (
               <div className="selected-detail">
                 <div className="detail-portrait" style={{ ...heroPortraitStyle(selectedHero), "--faction": FACTION_COLOR[selectedHero.faction] } as React.CSSProperties} />
-                <div><small>{selectedHero.hanja}</small><h2>{selectedHero.name}</h2><p>{selectedHero.faction} · {selectedHero.role} · {dutyProfileFor(selectedHero).label} · {selectedHero.cost}코스트 · {rangeLabelFor(selectedHero.range)} {selectedHero.range}칸</p></div>
+                <div><small>{selectedHero.faction} · {selectedHero.role}</small><h2>{selectedHero.name}</h2><p>{dutyProfileFor(selectedHero).label} · {selectedHero.cost}코스트 · {rangeLabelFor(selectedHero.range)} {selectedHero.range}칸</p></div>
                 <div className="detail-skill"><span>고유 스킬</span><strong>{selectedHero.skill}</strong><p>공격 {selectedHero.attack} · 방어 {selectedHero.defense} · 체력 {selectedHero.health} · 사거리 {selectedHero.range}</p><em className="duty-blurb">{dutyProfileFor(selectedHero).glyph} {dutyProfileFor(selectedHero).description}</em></div>
                 <div className="trait-panel">
                   <span>특성</span>
@@ -1208,28 +1208,28 @@ export default function Home() {
                 )}
                 <div className="detail-bonds">
                   {selectedHero.bonds.map((bond) => <span key={bond}>{bond}</span>)}
-                  {selectedHero.affinity.map((item) => <span key={item}>{BATTLEFIELD_BY_ID[item].hanja} {item}</span>)}
+                  {selectedHero.affinity.map((item) => <span key={item}>{item}</span>)}
                 </div>
                 <button className="sell-button" onClick={sellSelected}>장수 보내기 · ● {selectedHero.cost * (selectedPiece.star === 1 ? 1 : selectedPiece.star === 2 ? 3 : 9)}</button>
               </div>
             ) : (
               <div className="opponent-card">
-                <div className="opponent-mode"><span>{GAME_MODES[mode].hanja} {GAME_MODES[mode].label}</span><b>{mode === "single" ? DIFFICULTIES[difficulty].label : `${rankPoints}점`}</b></div>
-                <span className="banner-icon terrain-banner">{currentTheme.hanja}</span>
+                <div className="opponent-mode"><span>{GAME_MODES[mode].label}</span><b>{mode === "single" ? DIFFICULTIES[difficulty].label : `${rankPoints}점`}</b></div>
+                <span className="banner-icon terrain-banner">{theme}</span>
                 <b className="opponent-terrain">{theme} · {currentTheme.subtitle}</b>
                 <strong>{mode === "single" ? "호로관 선봉대" : "군웅 경쟁 진형"}</strong>
                 <p>예상 전력 {Math.round(820 * DIFFICULTIES[difficulty].enemyScale + round * 75)}</p>
                 <button className="opponent-plan-button" onClick={() => setModeOpen(true)}>
-                  <i style={{ "--tactic": TACTICS[tactic].color } as React.CSSProperties}>{TACTICS[tactic].hanja}</i>
+                  <i style={{ "--tactic": TACTICS[tactic].color } as React.CSSProperties}>{TACTICS[tactic].label.slice(0, 2)}</i>
                   <span><small>출전 전술</small><b>{TACTICS[tactic].label}</b></span><em>변경</em>
                 </button>
                 <ul className="terrain-rules">{currentTheme.ruleText.map((rule) => <li key={rule}>{rule}</li>)}</ul>
               </div>
             )}
             <div className="combat-records redesigned-readout">
-              <div><span className="record-avatar">地</span><p><b>무작위 전장</b><small>평지·산지·바다·습지·정글·사막</small></p></div>
-              <div><span className="record-avatar">職</span><p><b>역할 실루엣</b><small>탱커·딜러·힐러·책략가</small></p></div>
-              <div><span className="record-avatar">動</span><p><b>전용 모션</b><small>무기별 공격·스킬·피격</small></p></div>
+              <div><span className="record-avatar">전</span><p><b>무작위 전장</b><small>평지·산지·바다·습지·정글·사막</small></p></div>
+              <div><span className="record-avatar">역</span><p><b>역할 실루엣</b><small>탱커·딜러·힐러·책략가</small></p></div>
+              <div><span className="record-avatar">동</span><p><b>전용 모션</b><small>무기별 공격·스킬·피격</small></p></div>
             </div>
           </aside>
         </section>
@@ -1281,7 +1281,7 @@ export default function Home() {
                     key={`dock-${itemId}-${index}`}
                     onClick={() => equipFromBag(index)}
                   >
-                    {ITEM_BY_ID[itemId]?.hanja ?? "器"}
+                    {ITEM_BY_ID[itemId]?.glyph ?? "템"}
                   </button>
                 ))}
               </div>
@@ -1289,7 +1289,7 @@ export default function Home() {
           </div>
           <div className="battle-action">
             <span>{round}-{stage} · {FORMATIONS[formation].label} {formationTier}단계<br />전투 직전 전장 테마가 무작위로 공개됩니다.</span>
-            <button onClick={startBattle} disabled={combat}><small>AUTO BATTLE</small>전투 시작</button>
+            <button onClick={startBattle} disabled={combat}><small>자동 전투</small>전투 시작</button>
             <p>이자 +{Math.min(5, Math.floor(gold / 10))} · 연승 보너스 +{Math.min(3, Math.floor(Math.max(0, streak) / 2))}</p>
           </div>
         </section>
@@ -1338,7 +1338,7 @@ export default function Home() {
                     <div className="model-render" style={{ backgroundImage: `url('${design.src}')` }} />
                     <div className="model-copy">
                       <span>{hero.faction} · {ROLE_ARCHETYPES[hero.role].label} · {hero.cost}코스트</span>
-                      <h3>{hero.name} <i>{hero.hanja}</i></h3>
+                      <h3>{hero.name}</h3>
                       <strong>{design.epithet}</strong>
                       <dl><div><dt>실루엣</dt><dd>{design.silhouette}</dd></div><div><dt>재질</dt><dd>{design.material}</dd></div><div><dt>모션 키</dt><dd>{hero.skill} · {hero.role} 전용 리그</dd></div></dl>
                     </div>
@@ -1359,7 +1359,7 @@ export default function Home() {
       {catalogOpen && (
         <div className="catalog-overlay" role="dialog" aria-modal="true">
           <section className="catalog">
-            <header className="catalog-head"><div><span>百將</span><h2>삼국 장수록</h2><p>100명의 장수는 얼굴·두식·무기·갑주·색 배합이 겹치지 않도록 분리합니다.</p></div><button onClick={() => setCatalogOpen(false)}>×</button></header>
+            <header className="catalog-head"><div><span>장수 100</span><h2>삼국 장수록</h2><p>100명의 장수는 얼굴·두식·무기·갑주·색 배합이 겹치지 않도록 분리합니다.</p></div><button onClick={() => setCatalogOpen(false)}>×</button></header>
             <div className="catalog-tools">
               <div className="faction-tabs">{(["전체", "위", "촉", "오", "기타"] as const).map((item) => <button className={catalogFaction === item ? "active" : ""} onClick={() => setCatalogFaction(item)} key={item}>{item}</button>)}</div>
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="장수·인연 검색" />
@@ -1370,7 +1370,7 @@ export default function Home() {
                 <article className="catalog-card" style={{ "--faction": FACTION_COLOR[hero.faction] } as React.CSSProperties} key={hero.id}>
                   <div className="catalog-portrait" style={heroPortraitStyle(hero)} />
                   <div className="catalog-card-top"><span>{hero.faction}</span><b>{hero.cost} COST</b></div>
-                  <div className="catalog-card-copy"><h3>{hero.name}</h3><small>{hero.role} · {hero.hanja}</small><strong>{hero.skill}</strong><p>{hero.bonds.join(" · ")}</p></div>
+                  <div className="catalog-card-copy"><h3>{hero.name}</h3><small>{hero.faction} · {hero.role}</small><strong>{hero.skill}</strong><p>{hero.bonds.join(" · ")}</p></div>
                 </article>
               ))}
             </div>

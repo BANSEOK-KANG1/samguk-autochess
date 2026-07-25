@@ -278,9 +278,9 @@ export function CombatStage({
       <div className="live-combat-shell">
         <header className="live-combat-head">
           <div>
-            <small>{battleLabel} · AUTO BATTLE</small>
+            <small>자동 전투</small>
             <h2>
-              <i>{battlefield.hanja}</i>
+              <i>{theme.slice(0, 1)}</i>
               {theme} 전장
             </h2>
           </div>
@@ -332,15 +332,15 @@ export function CombatStage({
               <i /><i /><i /><i /><i /><i />
             </div>
             <div className="combat-side-label enemy">
-              <span>敵</span>
+              <span>적</span>
               <b>{opponent}</b>
             </div>
             <div className="combat-side-label ally">
-              <span>我</span>
+              <span>아군</span>
               <b>{allyFormation.label}</b>
             </div>
             <div className="combat-midline">
-              <span>交戰線</span>
+              <span>교전선</span>
             </div>
             <div className="terrain-topology-hud">
               <small>실전 지형 판정</small>
@@ -359,21 +359,21 @@ export function CombatStage({
               className="combat-tactic-badge enemy"
               style={{ "--tactic": enemyTactic.color } as React.CSSProperties}
             >
-              <i>{enemyTactic.hanja}</i>
+              <i>{enemyTactic.label.slice(0, 2)}</i>
               <span><small>적 전술</small><b>{enemyTactic.label}</b></span>
             </div>
             <div
               className="combat-tactic-badge ally"
               style={{ "--tactic": allyTactic.color } as React.CSSProperties}
             >
-              <i>{allyTactic.hanja}</i>
+              <i>{allyTactic.label.slice(0, 2)}</i>
               <span><small>아군 전술</small><b>{allyTactic.label}</b></span>
             </div>
             <div
               className="combat-formation-sigil enemy"
               style={{ "--formation": enemyFormation.color } as React.CSSProperties}
             >
-              <i>{enemyFormation.hanja}</i>
+              <i>{enemyFormation.label.slice(0, 1)}</i>
               <span>
                 <small>적 진법</small>
                 <b>{enemyFormation.label}</b>
@@ -384,7 +384,7 @@ export function CombatStage({
               className="combat-formation-sigil ally"
               style={{ "--formation": allyFormation.color } as React.CSSProperties}
             >
-              <i>{allyFormation.hanja}</i>
+              <i>{allyFormation.label.slice(0, 1)}</i>
               <span>
                 <small>아군 진법</small>
                 <b>{allyFormation.label}</b>
@@ -568,7 +568,7 @@ export function CombatStage({
                   <span className="combat-mana">
                     <i style={{ width: `${mana}%` }} />
                   </span>
-                  {unit.shield > 0 && <span className="combat-shield">盾</span>}
+                  {unit.shield > 0 && <span className="combat-shield">방</span>}
                   {unit.statuses.length > 0 && (
                     <span className="combat-status-stack">
                       {unit.statuses.map((status) => (
@@ -707,7 +707,7 @@ export function CombatStage({
                     >
                       <span className="ultimate-seal">
                         <i>{identity.glyph}</i>
-                        <b>{hero.hanja}</b>
+                        <b>{hero.name}</b>
                       </span>
                       <span className="ultimate-ring ring-a" />
                       <span className="ultimate-ring ring-b" />
@@ -763,7 +763,7 @@ export function CombatStage({
                       style={heroPortraitStyle(signatureHero)}
                     />
                     <span className="ultimate-portrait-light" />
-                    <b>{signatureHero.hanja}</b>
+                    <b>{signatureHero.name}</b>
                   </div>
                   <div className="ultimate-cinematic-copy">
                     <small>
@@ -793,7 +793,7 @@ export function CombatStage({
 
             {result && (
               <div className={`combat-verdict verdict-${result}`} role="status">
-                <span>{result === "ally" ? "勝" : result === "enemy" ? "敗" : "和"}</span>
+                <span>{result === "ally" ? "승" : result === "enemy" ? "패" : "무"}</span>
                 <strong>
                   {result === "ally"
                     ? "전투 승리"
@@ -822,15 +822,15 @@ export function CombatStage({
                   >
                     <i>
                       {battleEvent.type === "skill"
-                        ? "技"
+                        ? "기"
                         : battleEvent.type === "defeat"
-                          ? "沒"
+                          ? "전"
                           : battleEvent.type === "terrain"
-                            ? "地"
+                            ? "지"
                             : battleEvent.type === "status" &&
                                 battleEvent.status
                               ? STATUS_META[battleEvent.status].glyph
-                              : "擊"}
+                              : "타"}
                     </i>
                     <span>{battleEvent.label}</span>
                     {battleEvent.amount ? <b>{battleEvent.amount}</b> : null}
@@ -838,16 +838,16 @@ export function CombatStage({
                 ))
               ) : (
                 <li className="feed-ready">
-                  <i>令</i>
+                  <i>출</i>
                   <span>양 진영이 진군을 시작합니다.</span>
                 </li>
               )}
             </ul>
             <div className="combat-legend">
-              <span><i className="tank-dot">盾</i> 탱커</span>
-              <span><i className="dealer-dot">刃</i> 딜러</span>
-              <span><i className="healer-dot">癒</i> 힐러</span>
-              <span><i className="tactician-dot">策</i> 책략가</span>
+              <span><i className="tank-dot">탱</i> 탱커</span>
+              <span><i className="dealer-dot">딜</i> 딜러</span>
+              <span><i className="healer-dot">힐</i> 힐러</span>
+              <span><i className="tactician-dot">책</i> 책략가</span>
               <small>장수별 기술 · 상태이상 · 전장 사건이 실시간으로 판정됩니다.</small>
             </div>
           </aside>

@@ -13,29 +13,49 @@ function AndroidShell() {
   useEffect(() => {
     document.documentElement.classList.add("android-shell");
     const fit = () => {
-      const next = Math.min(
-        window.innerWidth / DESIGN_WIDTH,
-        window.innerHeight / DESIGN_HEIGHT,
+      const width = window.visualViewport?.width ?? window.innerWidth;
+      const height = window.visualViewport?.height ?? window.innerHeight;
+      const next = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
+      const safe = Number.isFinite(next) && next > 0 ? next : 1;
+      setScale(safe);
+      document.documentElement.style.setProperty("--app-scale", String(safe));
+      document.documentElement.style.setProperty(
+        "--app-shell-width",
+        `${Math.round(DESIGN_WIDTH * safe)}px`,
       );
-      setScale(next);
-      document.documentElement.style.setProperty("--app-scale", String(next));
+      document.documentElement.style.setProperty(
+        "--app-shell-height",
+        `${Math.round(DESIGN_HEIGHT * safe)}px`,
+      );
     };
     fit();
     window.addEventListener("resize", fit);
     window.addEventListener("orientationchange", fit);
+    window.visualViewport?.addEventListener("resize", fit);
+    window.visualViewport?.addEventListener("scroll", fit);
     return () => {
       window.removeEventListener("resize", fit);
       window.removeEventListener("orientationchange", fit);
+      window.visualViewport?.removeEventListener("resize", fit);
+      window.visualViewport?.removeEventListener("scroll", fit);
     };
   }, []);
 
   return (
     <div className="android-stage">
       <div
-        className="android-stage-inner"
-        style={{ "--app-scale": scale } as React.CSSProperties}
+        className="android-stage-frame"
+        style={{
+          width: DESIGN_WIDTH * scale,
+          height: DESIGN_HEIGHT * scale,
+        }}
       >
-        <Home />
+        <div
+          className="android-stage-inner"
+          style={{ transform: `scale(${scale})` }}
+        >
+          <Home />
+        </div>
       </div>
     </div>
   );

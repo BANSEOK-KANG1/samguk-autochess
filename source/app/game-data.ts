@@ -71,7 +71,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "평지",
     slug: "plain",
-    hanja: "原",
+    hanja: "평",
     subtitle: "넓은 시야와 기동전",
     description: "장애물이 적어 기병의 돌파와 군주의 지휘가 강해집니다.",
     favoredRoles: ["기병", "군주"],
@@ -87,7 +87,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "산지",
     slug: "mountain",
-    hanja: "山",
+    hanja: "산",
     subtitle: "고지와 좁은 협곡",
     description: "궁수와 수호가 고지를 장악하고 기병의 돌진은 둔화됩니다.",
     favoredRoles: ["궁수", "수호"],
@@ -103,7 +103,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "바다",
     slug: "sea",
-    hanja: "海",
+    hanja: "해",
     subtitle: "파도와 함선의 전장",
     description: "수전에 익숙한 오나라와 책사·지원 장수가 힘을 얻습니다.",
     favoredRoles: ["책사", "지원"],
@@ -120,7 +120,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "습지",
     slug: "swamp",
-    hanja: "澤",
+    hanja: "습",
     subtitle: "안개와 진흙 수로",
     description: "책사와 암살 장수가 시야를 이용하고 기병은 기동력을 잃습니다.",
     favoredRoles: ["책사", "암살"],
@@ -136,7 +136,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "정글",
     slug: "jungle",
-    hanja: "林",
+    hanja: "숲",
     subtitle: "매복과 독초의 숲",
     description: "암살자와 궁수가 숲에 숨어 첫 공격의 우위를 점합니다.",
     favoredRoles: ["암살", "궁수"],
@@ -152,7 +152,7 @@ export const BATTLEFIELD_THEMES: BattlefieldRule[] = [
   {
     id: "사막",
     slug: "desert",
-    hanja: "沙",
+    hanja: "사",
     subtitle: "열기와 모래바람",
     description: "강인한 용장과 기병이 유리하지만 지원 효과는 약해집니다.",
     favoredRoles: ["용장", "기병"],

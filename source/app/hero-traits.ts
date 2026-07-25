@@ -28,14 +28,14 @@ export const traitsForHero = (hero: Hero): TraitIcon[] => {
     },
     {
       id: `range-${hero.range}`,
-      glyph: hero.range >= 5 ? "遠" : hero.range >= 3 ? "射" : "近",
+      glyph: hero.range >= 5 ? "장" : hero.range >= 3 ? "중" : "근",
       label: `${hero.range}`,
       tip: `${rangeLabelFor(hero.range)} · 사거리 ${hero.range}칸`,
       tone: rangeTone,
     },
     {
       id: `faction-${hero.faction}`,
-      glyph: hero.faction === "위" ? "魏" : hero.faction === "촉" ? "蜀" : hero.faction === "오" ? "吳" : "群",
+      glyph: hero.faction === "기타" ? "군" : hero.faction.slice(0, 1),
       label: hero.faction,
       tip: `${hero.faction} 진영`,
       tone: FACTION_COLOR[hero.faction],
@@ -55,7 +55,7 @@ export const traitsForHero = (hero: Hero): TraitIcon[] => {
   if (hero.passive.kind === "전투") {
     traits.push({
       id: "passive-combat",
-      glyph: "戰",
+      glyph: "전",
       label: "전투",
       tip: `${hero.passive.name} · ${hero.passive.description}`,
       tone: "#c07050",
@@ -63,7 +63,7 @@ export const traitsForHero = (hero: Hero): TraitIcon[] => {
   } else if (hero.passive.kind === "지형") {
     traits.push({
       id: "passive-terrain",
-      glyph: "地",
+      glyph: "지",
       label: "지형",
       tip: `${hero.passive.name} · ${hero.passive.description}`,
       tone: "#6a9080",
@@ -71,7 +71,7 @@ export const traitsForHero = (hero: Hero): TraitIcon[] => {
   } else {
     traits.push({
       id: "passive-eco",
-      glyph: "財",
+      glyph: "경",
       label: "경제",
       tip: `${hero.passive.name} · ${hero.passive.description}`,
       tone: "#b08a45",
