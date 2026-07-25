@@ -15314,14 +15314,25 @@ html.android-shell .combat-cells {
 }
 
 html.android-shell .board-figurine .figurine-body {
-  width: 100% !important;
-  max-height: 100% !important;
+  position: absolute !important;
+  left: 4% !important;
+  right: 4% !important;
+  top: 2px !important;
+  bottom: 16px !important;
+  z-index: 2 !important;
+  width: auto !important;
+  height: auto !important;
+  max-height: none !important;
+  margin: 0 !important;
+  aspect-ratio: auto !important;
   opacity: 1 !important;
   filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.6)) brightness(1.08) contrast(1.04) !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
   background-color: transparent !important;
+  background-repeat: no-repeat !important;
   transform: none !important;
+  scale: none !important;
 }
 
 html.android-shell .trait-icons-figurine,
@@ -15340,20 +15351,52 @@ html.android-shell .formation-core-mark {
   display: none !important;
 }
 
+html.android-shell .board-slot {
+  clip-path: none !important;
+  overflow: visible !important;
+  min-height: 84px !important;
+}
+
+html.android-shell .board.prep-stage {
+  grid-template-columns: repeat(7, minmax(78px, 1fr)) !important;
+  grid-template-rows: repeat(4, minmax(88px, 1fr)) !important;
+  padding: 28px 20px 12px 84px !important;
+  gap: 6px 8px !important;
+  align-content: stretch !important;
+}
+
 html.android-shell .board-figurine {
-  inset: 1px 2px 0 !important;
-  padding-bottom: 0 !important;
+  position: absolute !important;
+  left: 0 !important;
+  right: 0 !important;
+  top: 0 !important;
+  bottom: 0 !important;
+  width: auto !important;
+  height: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  place-items: unset !important;
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
+html.android-shell .figurine-ground,
+html.android-shell .figurine-shadow,
+html.android-shell .figurine-rim {
+  display: none !important;
 }
 
 html.android-shell .figurine-name {
   left: 0 !important;
   right: 0 !important;
+  bottom: 0 !important;
+  z-index: 6 !important;
   padding: 1px 2px 2px !important;
-  background: linear-gradient(180deg, transparent, rgba(4, 6, 5, 0.9) 55%) !important;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 5, 0.92) 55%) !important;
 }
 
 html.android-shell .figurine-name strong {
-  font-size: 10px !important;
+  font-size: 11px !important;
 }
 
 html.android-shell .figurine-name small {
@@ -15390,12 +15433,19 @@ html.android-shell .enemy-direction small {
   display: none !important;
 }
 
+html.android-shell .rank-labels {
+  top: 28px !important;
+  bottom: 12px !important;
+  grid-template-rows: repeat(4, minmax(88px, 1fr)) !important;
+}
+
 html.android-shell .rank-labels small {
   display: none !important;
 }
 
 html.android-shell .rank-labels b {
-  font-size: 10px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
 }
 
 html.android-shell .live-combat {

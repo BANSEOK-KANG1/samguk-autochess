@@ -35,11 +35,13 @@ function readViewport(): { width: number; height: number } {
 
 function computeFit(): Fit {
   const { width, height } = readViewport();
+  // Uniform cover scale — fills the screen without distorting text/art.
+  const scale = Math.max(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
   return {
     width,
     height,
-    scaleX: width / DESIGN_WIDTH,
-    scaleY: height / DESIGN_HEIGHT,
+    scaleX: scale,
+    scaleY: scale,
   };
 }
 
@@ -99,7 +101,7 @@ function AndroidShell() {
         style={{
           width: DESIGN_WIDTH,
           height: DESIGN_HEIGHT,
-          transform: `scale(${fit.scaleX}, ${fit.scaleY})`,
+          transform: `translate(${(fit.width - DESIGN_WIDTH * fit.scaleX) / 2}px, ${(fit.height - DESIGN_HEIGHT * fit.scaleY) / 2}px) scale(${fit.scaleX}, ${fit.scaleY})`,
           transformOrigin: "0 0",
         }}
       >
