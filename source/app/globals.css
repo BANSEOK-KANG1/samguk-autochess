@@ -15176,35 +15176,31 @@ button {
   outline-offset: -1px;
 }
 
-/* Android shell: letterbox + scale fixed 1180×720 design into device */
+/* Android shell: stretch 1180×720 design to fill the entire device screen */
 .android-stage {
-  display: grid;
-  place-items: center;
-  width: 100vw;
-  height: 100dvh;
-  height: 100svh;
+  position: fixed;
+  inset: 0;
+  width: var(--app-vw, 100vw);
+  height: var(--app-vh, 100dvh);
   overflow: hidden;
   background: #070807;
   touch-action: manipulation;
 }
 
-.android-stage-frame {
-  position: relative;
-  overflow: hidden;
-  flex-shrink: 0;
-  background: #0b0c0b;
-  box-shadow: 0 0 0 1px rgba(197, 162, 92, 0.18);
-}
-
 .android-stage-inner {
+  position: absolute;
+  left: 0;
+  top: 0;
   width: 1180px;
   height: 720px;
-  transform-origin: top left;
+  transform: scale(var(--app-scale-x, 1), var(--app-scale-y, 1));
+  transform-origin: 0 0;
   will-change: transform;
 }
 
 html.android-shell,
-html.android-shell body {
+html.android-shell body,
+html.android-shell #root {
   width: 100%;
   height: 100%;
   margin: 0;
@@ -15213,14 +15209,17 @@ html.android-shell body {
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   touch-action: manipulation;
+  background: #070807;
 }
 
 html.android-shell .game-root {
+  position: relative;
   width: 1180px;
   min-width: 1180px;
   height: 720px;
   min-height: 720px;
   max-height: 720px;
+  overflow: hidden;
 }
 
 html.android-shell .game-frame {
@@ -15230,5 +15229,6 @@ html.android-shell .game-frame {
 }
 
 html.android-shell .ink-map {
-  position: absolute;
+  position: absolute !important;
+  inset: 0;
 }

@@ -1,61 +1,67 @@
-import { StrictMode, useEffect, useState } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import Home from "../app/page";
 import "../app/globals.css";
 import "../app/combat-motion.css";
 
+/** Desktop layout design size — stretched to fill the device screen. */
 const DESIGN_WIDTH = 1180;
 const DESIGN_HEIGHT = 720;
 
-function AndroidShell() {
-  const [scale, setScale] = useState(1);
+function readViewport() {
+  const vv = window.visualViewport;
+  const width = Math.max(
+    1,
+    Math.round(vv?.width ?? window.innerWidth ?? document.documentElement.clientWidth),
+  );
+  const height = Math.max(
+    1,
+    Math.round(vv?.height ?? window.innerHeight ?? document.documentElement.clientHeight),
+  );
+  return { width, height };
+}
 
+function applyFullscreenFit() {
+  const { width, height } = readViewport();
+  const scaleX = width / DESIGN_WIDTH;
+  const scaleY = height / DESIGN_HEIGHT;
+  const root = document.documentElement;
+  root.style.setProperty("--app-scale-x", String(scaleX));
+  root.style.setProperty("--app-scale-y", String(scaleY));
+  root.style.setProperty("--app-vw", `${width}px`);
+  root.style.setProperty("--app-vh", `${height}px`);
+  root.style.setProperty("--app-scale", String(Math.min(scaleX, scaleY)));
+}
+
+function AndroidShell() {
   useEffect(() => {
     document.documentElement.classList.add("android-shell");
-    const fit = () => {
-      const width = window.visualViewport?.width ?? window.innerWidth;
-      const height = window.visualViewport?.height ?? window.innerHeight;
-      const next = Math.min(width / DESIGN_WIDTH, height / DESIGN_HEIGHT);
-      const safe = Number.isFinite(next) && next > 0 ? next : 1;
-      setScale(safe);
-      document.documentElement.style.setProperty("--app-scale", String(safe));
-      document.documentElement.style.setProperty(
-        "--app-shell-width",
-        `${Math.round(DESIGN_WIDTH * safe)}px`,
-      );
-      document.documentElement.style.setProperty(
-        "--app-shell-height",
-        `${Math.round(DESIGN_HEIGHT * safe)}px`,
-      );
-    };
-    fit();
-    window.addEventListener("resize", fit);
-    window.addEventListener("orientationchange", fit);
-    window.visualViewport?.addEventListener("resize", fit);
-    window.visualViewport?.addEventListener("scroll", fit);
+    applyFullscreenFit();
+
+    const onResize = () => applyFullscreenFit();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
+    window.visualViewport?.addEventListener("scroll", onResize);
+
+    // Orientation / inset settle after first paint
+    const timers = [0, 50, 150, 400, 1000].map((ms) =>
+      window.setTimeout(onResize, ms),
+    );
+
     return () => {
-      window.removeEventListener("resize", fit);
-      window.removeEventListener("orientationchange", fit);
-      window.visualViewport?.removeEventListener("resize", fit);
-      window.visualViewport?.removeEventListener("scroll", fit);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
+      window.visualViewport?.removeEventListener("scroll", onResize);
+      timers.forEach((id) => window.clearTimeout(id));
     };
   }, []);
 
   return (
     <div className="android-stage">
-      <div
-        className="android-stage-frame"
-        style={{
-          width: DESIGN_WIDTH * scale,
-          height: DESIGN_HEIGHT * scale,
-        }}
-      >
-        <div
-          className="android-stage-inner"
-          style={{ transform: `scale(${scale})` }}
-        >
-          <Home />
-        </div>
+      <div className="android-stage-inner">
+        <Home />
       </div>
     </div>
   );
