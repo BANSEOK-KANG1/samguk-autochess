@@ -48,3 +48,6 @@ yarn-error.log*
 
 # Local release staging (uploaded via GitHub Releases)
 /release-assets/
+
+# Cursor debug session logs
+.cursor/debug*.log
