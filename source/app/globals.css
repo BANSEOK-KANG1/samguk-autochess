@@ -15480,6 +15480,9 @@ html.android-shell .android-stage {
   position: fixed !important;
   inset: 0 !important;
   overflow: hidden !important;
+  background:
+    radial-gradient(ellipse at 50% 42%, rgba(90, 68, 36, 0.22), transparent 55%),
+    linear-gradient(180deg, #0a0c0a 0%, #050605 100%) !important;
 }
 
 html.android-shell .android-stage-inner {
@@ -15487,6 +15490,72 @@ html.android-shell .android-stage-inner {
   left: 0 !important;
   top: 0 !important;
   transform-origin: 0 0 !important;
+  box-shadow: 0 0 0 1px rgba(197, 162, 92, 0.12);
+}
+
+/* Keep every overlay (intro/modals/combat) inside the scaled canvas */
+html.android-shell .intro-screen,
+html.android-shell .live-combat,
+html.android-shell .mode-overlay,
+html.android-shell .catalog-overlay,
+html.android-shell .art-lab-overlay {
+  position: absolute !important;
+}
+
+html.android-shell .intro-screen {
+  inset: 0 !important;
+  width: 1180px !important;
+  height: 720px !important;
+}
+
+/* Prep / combat / shop: readable rank labels & denser safe chrome */
+html.android-shell .rank-labels > span {
+  padding: 4px 6px !important;
+  border-left: 3px solid rgba(197, 162, 92, 0.55) !important;
+  background: linear-gradient(90deg, rgba(8, 10, 8, 0.82), rgba(8, 10, 8, 0.2)) !important;
+  border-radius: 0 4px 4px 0;
+}
+
+html.android-shell .rank-labels b {
+  font-size: 12px !important;
+  color: #e6d3a2 !important;
+  text-shadow: 0 1px 3px #000;
+}
+
+html.android-shell .battlefield-top {
+  padding: 0 12px !important;
+}
+
+html.android-shell .battlefield-top h1 {
+  font-size: 16px !important;
+}
+
+html.android-shell .battlefield-top .timer {
+  font-size: 9px !important;
+  white-space: nowrap;
+}
+
+html.android-shell .top-bar {
+  padding: 0 12px !important;
+}
+
+html.android-shell .battle-layout {
+  gap: 6px !important;
+  padding: 6px 6px 0 !important;
+}
+
+html.android-shell .shop-dock {
+  margin: 6px !important;
+  gap: 6px !important;
+}
+
+html.android-shell .formation-command {
+  right: 10px !important;
+  top: 6px !important;
+}
+
+html.android-shell .enemy-direction {
+  max-width: calc(100% - 220px);
 }
 
 /* ---- Android 성능 모드: 비싼 합성 효과 차단 ---- */

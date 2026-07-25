@@ -37,12 +37,23 @@
             1,
             Math.round((vv && vv.height) || window.innerHeight || screen.height),
           );
+          var padX = Math.max(6, Math.round(w * 0.01));
+          var padY = Math.max(6, Math.round(h * 0.018));
+          var scale = Math.min((w - padX * 2) / W, (h - padY * 2) / H);
           var root = document.documentElement;
           root.classList.add("android-shell");
-          root.style.setProperty("--app-scale-x", String(w / W));
-          root.style.setProperty("--app-scale-y", String(h / H));
+          root.style.setProperty("--app-scale-x", String(scale));
+          root.style.setProperty("--app-scale-y", String(scale));
           root.style.setProperty("--app-vw", w + "px");
           root.style.setProperty("--app-vh", h + "px");
+          root.style.setProperty(
+            "--app-offset-x",
+            Math.round((w - W * scale) / 2) + "px",
+          );
+          root.style.setProperty(
+            "--app-offset-y",
+            Math.round((h - H * scale) / 2) + "px",
+          );
         }
         fit();
         window.addEventListener("resize", fit);

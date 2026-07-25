@@ -952,7 +952,7 @@ export default function Home() {
           <button className="intro-start" onClick={() => setIntroOpen(false)}>
             전투 준비 시작
           </button>
-          <span className="intro-version">PRE-ALPHA v0.1.5</span>
+          <span className="intro-version">PRE-ALPHA v0.1.9</span>
         </div>
       )}
       <div className="ink-map" aria-hidden="true" />
