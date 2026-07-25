@@ -2068,8 +2068,11 @@ button {
 .terrain-title > span {
   display: grid;
   place-items: center;
+  flex: none;
   width: 27px;
   height: 27px;
+  overflow: hidden;
+  white-space: nowrap;
   border: 1px solid var(--terrain-accent);
   background: color-mix(in srgb, var(--terrain-accent) 16%, #111);
   color: color-mix(in srgb, var(--terrain-accent) 70%, #f1dfbb);
@@ -15311,13 +15314,14 @@ html.android-shell .combat-cells {
 }
 
 html.android-shell .board-figurine .figurine-body {
-  width: 88% !important;
-  max-height: 92% !important;
+  width: 100% !important;
+  max-height: 100% !important;
   opacity: 1 !important;
-  filter: drop-shadow(0 6px 4px rgba(0, 0, 0, 0.55)) !important;
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.6)) brightness(1.08) contrast(1.04) !important;
   mask-image: none !important;
   -webkit-mask-image: none !important;
-  background-color: rgba(20, 18, 14, 0.35);
+  background-color: transparent !important;
+  transform: none !important;
 }
 
 html.android-shell .trait-icons-figurine,
@@ -15325,10 +15329,73 @@ html.android-shell .trait-icons-compact {
   display: none !important;
 }
 
-html.android-shell .figurine-role {
-  width: 18px;
-  height: 18px;
-  font-size: 9px;
+/* Declutter Android prep board: hide tiny glyph badges so the character art reads clearly */
+html.android-shell .figurine-role,
+html.android-shell .figurine-banner,
+html.android-shell .figurine-affinity,
+html.android-shell .figurine-items,
+html.android-shell .slot-mark,
+html.android-shell .slot-terrain-badge,
+html.android-shell .formation-core-mark {
+  display: none !important;
+}
+
+html.android-shell .board-figurine {
+  inset: 1px 2px 0 !important;
+  padding-bottom: 0 !important;
+}
+
+html.android-shell .figurine-name {
+  left: 0 !important;
+  right: 0 !important;
+  padding: 1px 2px 2px !important;
+  background: linear-gradient(180deg, transparent, rgba(4, 6, 5, 0.9) 55%) !important;
+}
+
+html.android-shell .figurine-name strong {
+  font-size: 10px !important;
+}
+
+html.android-shell .figurine-name small {
+  display: none !important;
+}
+
+html.android-shell .board-figurine .stars {
+  font-size: 8px !important;
+}
+
+/* Empty prep slots: quieter so occupied units stand out */
+html.android-shell .empty-slot {
+  font-size: 14px !important;
+  color: rgba(197, 162, 92, 0.18) !important;
+}
+
+html.android-shell .empty-slot-blocked {
+  font-size: 10px !important;
+  color: rgba(150, 120, 90, 0.28) !important;
+}
+
+/* Top battlefield labels were overlapping the board — tidy them */
+html.android-shell .enemy-direction {
+  top: 3px !important;
+  left: 84px !important;
+  right: 12px !important;
+}
+
+html.android-shell .enemy-direction span {
+  font-size: 9px !important;
+}
+
+html.android-shell .enemy-direction small {
+  display: none !important;
+}
+
+html.android-shell .rank-labels small {
+  display: none !important;
+}
+
+html.android-shell .rank-labels b {
+  font-size: 10px !important;
 }
 
 html.android-shell .live-combat {
