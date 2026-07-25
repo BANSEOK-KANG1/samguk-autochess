@@ -509,6 +509,7 @@ export default function Home() {
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [battleResult, setBattleResult] = useState<CombatWinner | null>(null);
   const [speed, setSpeed] = useState<1 | 2>(1);
+  const [introOpen, setIntroOpen] = useState(true);
   const currentTheme = BATTLEFIELD_BY_ID[theme];
   const currentFormation = FORMATIONS[formation];
   const boardCount = board.filter(Boolean).length;
@@ -942,6 +943,17 @@ export default function Home() {
         "--terrain-accent": currentTheme.accent,
       } as React.CSSProperties}
     >
+      {introOpen && (
+        <div className="intro-screen" role="dialog" aria-label="게임 시작">
+          <span className="intro-emblem">삼</span>
+          <h1>삼국지 오토체스</h1>
+          <p>백 명의 장수 · 진법과 지형이 얽히는 자동 전투</p>
+          <button className="intro-start" onClick={() => setIntroOpen(false)}>
+            전투 준비 시작
+          </button>
+          <span className="intro-version">PRE-ALPHA v0.1.5</span>
+        </div>
+      )}
       <div className="ink-map" aria-hidden="true" />
       <div className={`game-frame ${combat ? "game-frame--combat" : ""}`}>
         <header className="top-bar">

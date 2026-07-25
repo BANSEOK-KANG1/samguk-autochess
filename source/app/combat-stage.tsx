@@ -35,6 +35,7 @@ import {
   combatTerrainGrid,
   terrainRulesForTheme,
 } from "./combat-terrain";
+import { isLiteShell } from "./platform";
 
 const ROLE_MOTION_CLASS: Record<Role, string> = {
   군주: "role-lord",
@@ -167,6 +168,7 @@ export function CombatStage({
   const signatureTimer = useRef<number | null>(null);
   const terrainShowTimer = useRef<number | null>(null);
   const terrainTimer = useRef<number | null>(null);
+  const lite = isLiteShell();
   const battlefield = BATTLEFIELD_BY_ID[theme];
   const allyAlive = state.units.filter(
     (unit) => unit.side === "ally" && unit.hp > 0,
@@ -301,36 +303,40 @@ export function CombatStage({
           <div
             className={`combat-arena ${signatureMoment ? "ultimate-active" : ""}`}
           >
-            <div className="combat-horizon" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-            </div>
-            <div className="combat-scenery scenery-back" aria-hidden="true">
-              <i /><i /><i /><i /><i /><i /><i /><i />
-            </div>
-            <div className="combat-ground-3d" aria-hidden="true">
-              {Array.from({ length: 9 }, (_, index) => (
-                <i key={index} />
-              ))}
-            </div>
-            <div className="combat-key-light" aria-hidden="true" />
-            <div className="combat-atmosphere" aria-hidden="true">
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </div>
-            <div
-              className={`terrain-combat-vfx terrain-${battlefield.slug} ${
-                terrainMoment ? "is-active" : ""
-              }`}
-              aria-hidden="true"
-            >
-              <i /><i /><i /><i /><i /><i />
-            </div>
+            {!lite && (
+              <>
+                <div className="combat-horizon" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <div className="combat-scenery scenery-back" aria-hidden="true">
+                  <i /><i /><i /><i /><i /><i /><i /><i />
+                </div>
+                <div className="combat-ground-3d" aria-hidden="true">
+                  {Array.from({ length: 9 }, (_, index) => (
+                    <i key={index} />
+                  ))}
+                </div>
+                <div className="combat-key-light" aria-hidden="true" />
+                <div className="combat-atmosphere" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                  <i />
+                </div>
+                <div
+                  className={`terrain-combat-vfx terrain-${battlefield.slug} ${
+                    terrainMoment ? "is-active" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  <i /><i /><i /><i /><i /><i />
+                </div>
+              </>
+            )}
             <div className="combat-side-label enemy">
               <span>적</span>
               <b>{opponent}</b>
@@ -454,85 +460,103 @@ export function CombatStage({
                 >
                   <span className="combat-fighter" aria-hidden="true">
                     <i className="fighter-ground" />
-                    <i className="fighter-depth-shadow" />
-                    <span className="fighter-ascension-ring">
-                      <i />
-                      <i />
-                    </span>
-                    <span className="fighter-star-particles">
-                      <i /><i /><i /><i /><i /><i />
-                    </span>
-                    <span className="fighter-mount">
-                      <i className="mount-body" />
-                      <i className="mount-head" />
-                      <i className="mount-leg mount-leg-a" />
-                      <i className="mount-leg mount-leg-b" />
-                      <i className="mount-leg mount-leg-c" />
-                      <i className="mount-leg mount-leg-d" />
-                    </span>
+                    {!lite && (
+                      <>
+                        <i className="fighter-depth-shadow" />
+                        <span className="fighter-ascension-ring">
+                          <i />
+                          <i />
+                        </span>
+                        <span className="fighter-star-particles">
+                          <i /><i /><i /><i /><i /><i />
+                        </span>
+                        <span className="fighter-mount">
+                          <i className="mount-body" />
+                          <i className="mount-head" />
+                          <i className="mount-leg mount-leg-a" />
+                          <i className="mount-leg mount-leg-b" />
+                          <i className="mount-leg mount-leg-c" />
+                          <i className="mount-leg mount-leg-d" />
+                        </span>
+                      </>
+                    )}
                     <span className="fighter-rig">
                       <span
                         className="fighter-body-art"
                         style={heroCombatArtStyle(hero)}
                       />
-                      <span className="fighter-articulated-body">
-                        <i
-                          className="fighter-segment segment-legs"
-                          style={heroCombatArtStyle(hero)}
-                        />
-                        <i
-                          className="fighter-segment segment-torso"
-                          style={heroCombatArtStyle(hero)}
-                        />
-                        <i
-                          className="fighter-segment segment-arm-back"
-                          style={heroCombatArtStyle(hero)}
-                        />
-                        <i
-                          className="fighter-segment segment-arm-weapon"
-                          style={heroCombatArtStyle(hero)}
-                        />
-                        <i
-                          className="fighter-segment segment-head"
-                          style={heroCombatArtStyle(hero)}
-                        />
-                      </span>
-                      <span className="fighter-joint-map" aria-hidden="true">
-                        <i className="joint joint-neck" />
-                        <i className="joint joint-shoulder-back" />
-                        <i className="joint joint-shoulder-weapon" />
-                        <i className="joint joint-elbow-back" />
-                        <i className="joint joint-elbow-weapon" />
-                        <i className="joint joint-pelvis" />
-                        <i className="joint joint-knee-back" />
-                        <i className="joint joint-knee-front" />
-                      </span>
+                      {!lite && (
+                        <>
+                          <span className="fighter-articulated-body">
+                            <i
+                              className="fighter-segment segment-legs"
+                              style={heroCombatArtStyle(hero)}
+                            />
+                            <i
+                              className="fighter-segment segment-torso"
+                              style={heroCombatArtStyle(hero)}
+                            />
+                            <i
+                              className="fighter-segment segment-arm-back"
+                              style={heroCombatArtStyle(hero)}
+                            />
+                            <i
+                              className="fighter-segment segment-arm-weapon"
+                              style={heroCombatArtStyle(hero)}
+                            />
+                            <i
+                              className="fighter-segment segment-head"
+                              style={heroCombatArtStyle(hero)}
+                            />
+                          </span>
+                          <span className="fighter-joint-map" aria-hidden="true">
+                            <i className="joint joint-neck" />
+                            <i className="joint joint-shoulder-back" />
+                            <i className="joint joint-shoulder-weapon" />
+                            <i className="joint joint-elbow-back" />
+                            <i className="joint joint-elbow-weapon" />
+                            <i className="joint joint-pelvis" />
+                            <i className="joint joint-knee-back" />
+                            <i className="joint joint-knee-front" />
+                          </span>
+                        </>
+                      )}
                       <i className="fighter-body-rim" />
-                      <i className="fighter-aura-disc" />
-                      <i className="fighter-rank-halo" />
-                      <i className="fighter-banner"><b>{hero.faction}</b></i>
+                      {!lite && (
+                        <>
+                          <i className="fighter-aura-disc" />
+                          <i className="fighter-rank-halo" />
+                          <i className="fighter-banner"><b>{hero.faction}</b></i>
+                        </>
+                      )}
                     </span>
-                    <span
-                      className="fighter-afterimage"
-                      style={heroCombatArtStyle(hero)}
-                    />
-                    <span className="fighter-signature-trail">
+                    {!lite && (
+                      <>
+                        <span
+                          className="fighter-afterimage"
+                          style={heroCombatArtStyle(hero)}
+                        />
+                        <span className="fighter-signature-trail">
+                          <i />
+                          <i />
+                          <i />
+                        </span>
+                        <i className="fighter-speed-line fighter-speed-line-a" />
+                        <i className="fighter-speed-line fighter-speed-line-b" />
+                        <i className="fighter-speed-line fighter-speed-line-c" />
+                        <i className="fighter-action-arc" />
+                        <i className="fighter-action-arc fighter-action-arc-back" />
+                        <i className="fighter-dust" />
+                      </>
+                    )}
+                  </span>
+                  {!lite && (
+                    <span className="combat-role-vfx" aria-hidden="true">
                       <i />
                       <i />
                       <i />
                     </span>
-                    <i className="fighter-speed-line fighter-speed-line-a" />
-                    <i className="fighter-speed-line fighter-speed-line-b" />
-                    <i className="fighter-speed-line fighter-speed-line-c" />
-                    <i className="fighter-action-arc" />
-                    <i className="fighter-action-arc fighter-action-arc-back" />
-                    <i className="fighter-dust" />
-                  </span>
-                  <span className="combat-role-vfx" aria-hidden="true">
-                    <i />
-                    <i />
-                    <i />
-                  </span>
+                  )}
                   {unit.terrainKind !== "ground" && (
                     <span
                       className={`combat-footing-badge footing-${unit.terrainKind}`}
@@ -542,21 +566,25 @@ export function CombatStage({
                       <b>{COMBAT_TERRAIN_META[unit.terrainKind].label}</b>
                     </span>
                   )}
-                  <span className="combat-role-crest" title={`${dutyVisual.label} · ${dutyVisual.description}`}>
-                    <i>{dutyVisual.glyph}</i>
-                    <b>{dutyVisual.short}</b>
-                  </span>
-                  <span className="trait-icons trait-icons-combat">
-                    {traits.slice(0, 3).map((trait) => (
-                      <i
-                        key={trait.id}
-                        title={trait.tip}
-                        style={{ "--trait-tone": trait.tone } as React.CSSProperties}
-                      >
-                        {trait.glyph}
-                      </i>
-                    ))}
-                  </span>
+                  {!lite && (
+                    <>
+                      <span className="combat-role-crest" title={`${dutyVisual.label} · ${dutyVisual.description}`}>
+                        <i>{dutyVisual.glyph}</i>
+                        <b>{dutyVisual.short}</b>
+                      </span>
+                      <span className="trait-icons trait-icons-combat">
+                        {traits.slice(0, 3).map((trait) => (
+                          <i
+                            key={trait.id}
+                            title={trait.tip}
+                            style={{ "--trait-tone": trait.tone } as React.CSSProperties}
+                          >
+                            {trait.glyph}
+                          </i>
+                        ))}
+                      </span>
+                    </>
+                  )}
                   <span className="combat-unit-ring" />
                   <span className="combat-unit-name">
                     <b>{hero.name}</b>
@@ -751,18 +779,22 @@ export function CombatStage({
                   }
                   aria-hidden="true"
                 >
-                  <div className="ultimate-scene-art">
-                    <i />
-                  </div>
-                  <div className="ultimate-cinematic-wash">
-                    <i /><i /><i /><i /><i /><i />
-                  </div>
+                  {!lite && (
+                    <>
+                      <div className="ultimate-scene-art">
+                        <i />
+                      </div>
+                      <div className="ultimate-cinematic-wash">
+                        <i /><i /><i /><i /><i /><i />
+                      </div>
+                    </>
+                  )}
                   <div className="ultimate-portrait-frame">
                     <span
                       className="ultimate-portrait-art"
                       style={heroPortraitStyle(signatureHero)}
                     />
-                    <span className="ultimate-portrait-light" />
+                    {!lite && <span className="ultimate-portrait-light" />}
                     <b>{signatureHero.name}</b>
                   </div>
                   <div className="ultimate-cinematic-copy">
@@ -779,14 +811,18 @@ export function CombatStage({
                     </strong>
                     <em>{signatureIdentity.title}</em>
                   </div>
-                  <span className="ultimate-cinematic-glyph">
-                    {signatureIdentity.glyph}
-                  </span>
-                  <span className="ultimate-cinematic-body">
-                    <i style={heroCombatArtStyle(signatureHero)} />
-                  </span>
-                  <span className="ultimate-cinematic-cut cut-a" />
-                  <span className="ultimate-cinematic-cut cut-b" />
+                  {!lite && (
+                    <>
+                      <span className="ultimate-cinematic-glyph">
+                        {signatureIdentity.glyph}
+                      </span>
+                      <span className="ultimate-cinematic-body">
+                        <i style={heroCombatArtStyle(signatureHero)} />
+                      </span>
+                      <span className="ultimate-cinematic-cut cut-a" />
+                      <span className="ultimate-cinematic-cut cut-b" />
+                    </>
+                  )}
                   <span className="ultimate-cinematic-timeline"><i /></span>
                 </div>
               )}

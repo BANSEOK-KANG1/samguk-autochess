@@ -15350,3 +15350,193 @@ html.android-shell .android-stage-inner {
   transform-origin: 0 0 !important;
 }
 
+/* ---- Android 성능 모드: 비싼 합성 효과 차단 ---- */
+html.android-shell * {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+html.android-shell .board-scenery,
+html.android-shell .battle-wash,
+html.android-shell .terrain-topology-hud,
+html.android-shell .combat-tactic-badge,
+html.android-shell .combat-formation-sigil {
+  display: none !important;
+}
+
+html.android-shell .ink-map::after {
+  display: none !important;
+}
+
+html.android-shell .combat-unit {
+  transition:
+    left 300ms linear,
+    top 300ms linear,
+    opacity 200ms ease !important;
+}
+
+html.android-shell .combat-unit .fighter-rig,
+html.android-shell .combat-unit.side-enemy .fighter-rig {
+  filter: none !important;
+}
+
+html.android-shell .fighter-body-rim {
+  display: none !important;
+}
+
+/* ---- Android 필살기 컷신: 애니메이션·클립 제거하고 확실하게 표시 ---- */
+html.android-shell .ultimate-cinematic {
+  inset: 16% 0 22% !important;
+  clip-path: none !important;
+  animation: none !important;
+  opacity: 1 !important;
+  background:
+    linear-gradient(90deg, rgba(4, 6, 6, 0.97) 0 30%, color-mix(in srgb, var(--signature) 28%, rgba(7, 9, 9, 0.95)) 60%, rgba(3, 5, 5, 0.96) 100%) !important;
+  box-shadow:
+    inset 0 2px var(--signature-accent),
+    inset 0 -2px var(--signature) !important;
+}
+
+html.android-shell .ultimate-cinematic::before,
+html.android-shell .ultimate-cinematic::after {
+  display: none !important;
+}
+
+html.android-shell .ultimate-portrait-frame {
+  left: 3% !important;
+  top: 4% !important;
+  width: 220px !important;
+  height: 92% !important;
+  clip-path: none !important;
+  animation: none !important;
+  transform: none !important;
+  border: 1px solid color-mix(in srgb, var(--signature-accent) 70%, transparent) !important;
+  box-shadow: 10px 0 24px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.android-shell .ultimate-portrait-art {
+  inset: 0 !important;
+  animation: none !important;
+  transform: none !important;
+  filter: none !important;
+  background-size: 500% 500% !important;
+  background-repeat: no-repeat !important;
+}
+
+html.android-shell .ultimate-cinematic-copy {
+  left: 26% !important;
+  top: 18% !important;
+  width: 60% !important;
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+html.android-shell .ultimate-cinematic-copy small,
+html.android-shell .ultimate-cinematic-copy h3,
+html.android-shell .ultimate-cinematic-copy strong,
+html.android-shell .ultimate-cinematic-copy em {
+  animation: none !important;
+  transform: none !important;
+  opacity: 1 !important;
+}
+
+html.android-shell .ultimate-cinematic-timeline > i {
+  animation-duration: var(--cinematic-duration, 1220ms) !important;
+}
+
+html.android-shell .motion-system-v21 .combat-arena.ultimate-active .combat-unit:not(.action-skill) {
+  opacity: 0.8 !important;
+}
+
+/* ---- 인트로 화면 ---- */
+.intro-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 38%, rgba(159, 48, 39, 0.22), transparent 52%),
+    linear-gradient(180deg, rgba(7, 8, 7, 0.86), rgba(5, 6, 5, 0.96)),
+    url("/ink-map-bg.png") center / cover no-repeat #070807;
+  animation: intro-fade-in 600ms ease both;
+}
+
+@keyframes intro-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.intro-emblem {
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+  border: 3px solid #a83c31;
+  color: #e0d3ae;
+  font-family: "Nanum Myeongjo", "Batang", serif;
+  font-size: 44px;
+  font-weight: 900;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255, 190, 160, 0.2), transparent 58%),
+    rgba(112, 28, 22, 0.72);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 214, 178, 0.14),
+    0 14px 40px rgba(0, 0, 0, 0.55);
+  transform: rotate(-3deg);
+}
+
+.intro-screen h1 {
+  margin: 6px 0 0;
+  color: #f0e2c0;
+  font-family: "Nanum Myeongjo", "Batang", serif;
+  font-size: 44px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  text-shadow: 0 4px 22px rgba(255, 226, 173, 0.18);
+}
+
+.intro-screen > p {
+  margin: 0;
+  color: #b3a88f;
+  font-size: 14px;
+  letter-spacing: 0.04em;
+}
+
+.intro-start {
+  margin-top: 14px;
+  padding: 14px 46px;
+  border: 1px solid #c9a35d;
+  background: linear-gradient(180deg, #8f2c22, #6d1f18);
+  color: #f7e7c2;
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 226, 173, 0.28),
+    0 12px 30px rgba(0, 0, 0, 0.5);
+}
+
+.intro-start:active {
+  transform: translateY(1px);
+}
+
+.intro-version {
+  margin-top: 4px;
+  color: #756c58;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+}
+
+html.android-shell .intro-screen {
+  position: absolute;
+  width: 1180px;
+  height: 720px;
+}
+
