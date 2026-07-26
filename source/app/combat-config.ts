@@ -23,26 +23,26 @@ export const GAME_MODES: Record<
   }
 > = {
   single: {
-    label: "싱글 캠페인",
-    hanja: "캠페인",
-    eyebrow: "SOLO 2~4 SEATS",
+    label: "난세 원정",
+    hanja: "원정",
+    eyebrow: "혼자 · 최대 4인",
     description:
-      "1~3전은 산적 파밍, 4전부터 조합전. 이후 조합전 3회마다 파밍판이 돌아오는 오프라인 오토체스입니다.",
+      "들판의 산적부터 시작해 군웅과 맞붙습니다. 세 번 싸울 때마다 약탈전으로 숨을 고릅니다.",
     estimatedMinutes: "15~25분",
   },
   versus: {
     label: "군웅 점수전",
     hanja: "점수",
-    eyebrow: "AI RANKED PRESEASON",
+    eyebrow: "점수 겨루기",
     description:
-      "캠페인과 동일 규칙에 승패 점수만 추가됩니다. 나중에 비동기 고스트 대전과 연결됩니다.",
+      "원정과 같은 흐름에 승패 점수만 더합니다. 한 판 한 판 이름이 남습니다.",
     estimatedMinutes: "15~25분",
   },
   practice: {
     label: "연습 전투",
     hanja: "연습",
-    eyebrow: "QUICK DRILL",
-    description: "저장 없이 1:1 AI 훈련만 반복합니다. 배치·시너지 실험용입니다.",
+    eyebrow: "가볍게 한 판",
+    description: "저장 없이 AI 한 팀과만 겨룹니다. 배치와 인연을 시험해 보세요.",
     estimatedMinutes: "3~8분",
   },
 };
@@ -53,9 +53,9 @@ export const AI_RIVAL_OPTIONS: {
   seats: number;
   blurb: string;
 }[] = [
-  { count: 1, label: "1 AI", seats: 2, blurb: "빠른 결전" },
-  { count: 2, label: "2 AI", seats: 3, blurb: "표준 한 판" },
-  { count: 3, label: "3 AI", seats: 4, blurb: "최대 4인 구조" },
+  { count: 1, label: "맞수 하나", seats: 2, blurb: "빠른 결전" },
+  { count: 2, label: "맞수 둘", seats: 3, blurb: "표준 한 판" },
+  { count: 3, label: "맞수 셋", seats: 4, blurb: "최대 규모" },
 ];
 
 export const DIFFICULTIES: Record<

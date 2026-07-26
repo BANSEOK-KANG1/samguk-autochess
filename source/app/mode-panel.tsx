@@ -70,22 +70,22 @@ export function ModePanel({
       className="mode-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="전쟁 방식과 전술 설정"
+      aria-label="출진 준비"
     >
       <div className="mode-panel">
         <header className="mode-panel-head">
           <div>
-            <small>전쟁 본부 · 출전 설정</small>
-            <h2>전쟁 방식과 출전 전술</h2>
-            <p>서버 없이 싱글 캠페인부터 완주하고, 같은 규칙으로 2~4석을 확장합니다.</p>
+            <small>군영 막사 · 출진 준비</small>
+            <h2>어떻게 싸울까요?</h2>
+            <p>혼자 원정을 떠나거나, 맞수들과 한판 겨뤄 보세요.</p>
           </div>
-          <button onClick={onClose} aria-label="전쟁 방식 설정 닫기">×</button>
+          <button onClick={onClose} aria-label="출진 준비 닫기">×</button>
         </header>
 
         <section className="mode-section">
           <div className="mode-section-title">
             <span>1</span>
-            <div><b>전쟁 방식</b><small>플레이 목표와 상대 규칙</small></div>
+            <div><b>놀이 방식</b><small>목표와 상대를 고릅니다</small></div>
           </div>
           <div className="mode-choice-grid">
             {(Object.keys(GAME_MODES) as GameMode[]).map((modeId) => {
@@ -116,8 +116,8 @@ export function ModePanel({
             <div className="mode-section-title">
               <span>2</span>
               <div>
-                <b>AI 라이벌 수</b>
-                <small>당신 포함 최대 4석 · 빈자리는 AI가 채웁니다</small>
+                <b>맞수 수</b>
+                <small>당신 포함 최대 4인 · 빈자리는 AI가 채웁니다</small>
               </div>
             </div>
             <div className="difficulty-grid ai-rival-grid">
@@ -130,7 +130,7 @@ export function ModePanel({
                 >
                   <i>{option.seats}</i>
                   <strong>{option.label}</strong>
-                  <span>총 {option.seats}석</span>
+                  <span>총 {option.seats}인</span>
                   <p>{option.blurb}</p>
                 </button>
               ))}
@@ -145,8 +145,8 @@ export function ModePanel({
               <b>{mode === "practice" ? "연습 규칙" : "난이도"}</b>
               <small>
                 {mode === "practice"
-                  ? "저장 없는 1:1 훈련"
-                  : "적 성장률과 승리 보상"}
+                  ? "저장 없는 가벼운 연습"
+                  : "적 성장과 승리 보상"}
               </small>
             </div>
           </div>
@@ -154,7 +154,7 @@ export function ModePanel({
             <div className="versus-rule">
               <b>연습 전투</b>
               <span>한 판 저장·탈락 없이 AI 한 팀과만 겨룹니다.</span>
-              <small>캠페인 진행은 싱글/점수전에서 이어하세요.</small>
+              <small>긴 원정은 「난세 원정」이나 「군웅 점수전」에서 이어 가세요.</small>
             </div>
           ) : (
             <div className="difficulty-grid">
@@ -183,7 +183,7 @@ export function ModePanel({
         <section className="mode-section">
           <div className="mode-section-title">
             <span>{showCampaignRules ? "4" : "3"}</span>
-            <div><b>출전 전술</b><small>내 역할 구성에 맞춘 전투 보정</small></div>
+            <div><b>싸움 방식</b><small>역할에 맞춘 전투 보정</small></div>
           </div>
           <div className="tactic-grid">
             {TACTIC_ORDER.map((tacticId) => {
@@ -221,8 +221,8 @@ export function ModePanel({
           <div className="mode-section-title">
             <span>{showCampaignRules ? "5" : "4"}</span>
             <div>
-              <b>출전 진법</b>
-              <small>유효 칸에 장수를 배치해 2·4·6명 단계 활성화</small>
+              <b>진법</b>
+              <small>유효 칸에 장수를 올려 2·4·6명 단계 활성화</small>
             </div>
           </div>
           <div className="formation-choice-grid">
@@ -266,17 +266,17 @@ export function ModePanel({
 
         <footer className="mode-panel-foot">
           <div>
-            <span>현재 출전안</span>
+            <span>지금 준비</span>
             <b>
               {GAME_MODES[mode].label}
               {showCampaignRules
-                ? ` · ${DIFFICULTIES[difficulty].label} · AI ${aiCount}`
+                ? ` · ${DIFFICULTIES[difficulty].label} · 맞수 ${aiCount}`
                 : ""}
               {" · "}
               {selectedTactic.label} · {selectedFormation.label}
             </b>
           </div>
-          <button onClick={onClose}>출전안 적용</button>
+          <button onClick={onClose}>이대로 출진</button>
         </footer>
       </div>
     </div>

@@ -46,6 +46,9 @@ yarn-error.log*
 .pnpm-debug.log*
 *.pem
 
+# Local Kenney asset packs (runtime uses public/kenney-*)
+source/kenney_*/
+
 # Local release staging (uploaded via GitHub Releases)
 /release-assets/
 

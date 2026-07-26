@@ -30,6 +30,8 @@ export type PlayerState = {
   shopKind: ShopKind;
   itemShop: (string | null)[];
   itemBag: string[];
+  /** Free shop rerolls in hand. Granted when the loot shop opens. */
+  freeRerolls: number;
   locked: boolean;
   tactic: TacticId;
   formation: FormationId;
@@ -55,7 +57,7 @@ export type FightResult = {
 };
 
 export type MatchState = {
-  version: 2;
+  version: 3;
   mode: GameMode;
   difficulty: DifficultyId;
   /** Number of AI rivals (1–3). Total seats = aiCount + 1. */
@@ -85,4 +87,4 @@ export type BoardSnapshot = {
 export const BOARD_COLUMNS = 7;
 export const BOARD_SIZE = 28;
 export const BOARD_POSITIONS = [10, 2, 3, 11, 4, 24];
-export const MATCH_SAVE_VERSION = 2 as const;
+export const MATCH_SAVE_VERSION = 3 as const;

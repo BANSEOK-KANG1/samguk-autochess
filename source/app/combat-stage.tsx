@@ -14,8 +14,6 @@ import type {
   CombatUnit,
   CombatWinner,
 } from "./combat-engine";
-import { DUTY_PROFILES } from "./combat-duty";
-import { traitsForHero } from "./hero-traits";
 import {
   ROLE_ARCHETYPES,
   TACTICS,
@@ -36,13 +34,16 @@ import {
   terrainRulesForTheme,
 } from "./combat-terrain";
 import { isLiteShell } from "./platform";
-import { assetCssUrl } from "./asset-url";
+import { assetCssUrl, assetUrl } from "./asset-url";
+import { isArenaTheme, arenaTileFor } from "./arena-maps";
+import { ArenaToken } from "./arena-board";
 import {
   COMBAT_CINEMATIC_MS,
   COMBAT_SKILL_HOLD_MS,
   COMBAT_SPEED_LABEL,
   type CombatSpeed,
 } from "./combat-timing";
+import { playSfx } from "./sound";
 
 const ROLE_MOTION_CLASS: Record<Role, string> = {
   군주: "role-lord",
@@ -175,8 +176,10 @@ export function CombatStage({
   const signatureTimer = useRef<number | null>(null);
   const terrainShowTimer = useRef<number | null>(null);
   const terrainTimer = useRef<number | null>(null);
+  const heardEventIds = useRef(new Set<string>());
   const lite = isLiteShell();
   const battlefield = BATTLEFIELD_BY_ID[theme];
+  const useArena = isArenaTheme(theme);
   const allyAlive = state.units.filter(
     (unit) => unit.side === "ally" && unit.hp > 0,
   ).length;
@@ -205,6 +208,37 @@ export function CombatStage({
   const signatureScene = signatureHero
     ? heroUltimateArtFor(signatureHero)
     : null;
+
+  useEffect(() => {
+    heardEventIds.current.clear();
+  }, [state.seed]);
+
+  useEffect(() => {
+    for (const battleEvent of state.events) {
+      if (heardEventIds.current.has(battleEvent.id)) continue;
+      heardEventIds.current.add(battleEvent.id);
+      switch (battleEvent.type) {
+        case "attack":
+        case "damage":
+          playSfx("hit", { volume: lite ? 0.7 : 1 });
+          break;
+        case "skill":
+          playSfx("skill");
+          break;
+        case "heal":
+          playSfx("heal");
+          break;
+        case "defeat":
+          playSfx("defeat");
+          break;
+        case "terrain":
+          playSfx("battle", { volume: 0.55 });
+          break;
+        default:
+          break;
+      }
+    }
+  }, [lite, state.events]);
 
   useEffect(() => {
     const latestSkill = [...state.events]
@@ -274,7 +308,7 @@ export function CombatStage({
 
   return (
     <div
-      className={`live-combat motion-system-v21 motion-system-v22 terrain-${battlefield.slug}`}
+      className={`live-combat motion-system-v21 motion-system-v22 terrain-${battlefield.slug} ${useArena ? "arena-desert" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={`${opponent} 자동 전투`}
@@ -308,13 +342,17 @@ export function CombatStage({
 
         <div className="live-combat-body">
           <div
-            className={`combat-arena ${signatureMoment ? "ultimate-active" : ""}`}
-            style={{
-              backgroundImage: `linear-gradient(180deg, rgba(5, 8, 7, 0.28), rgba(3, 5, 4, 0.55)), ${assetCssUrl(battlefield.asset)}`,
-              backgroundSize: "cover",
-              backgroundPosition: "center 46%",
-              backgroundRepeat: "no-repeat",
-            }}
+            className={`combat-arena ${signatureMoment ? "ultimate-active" : ""} ${useArena ? "arena-desert" : ""}`}
+            style={
+              useArena
+                ? undefined
+                : {
+                    backgroundImage: `linear-gradient(180deg, rgba(5, 8, 7, 0.28), rgba(3, 5, 4, 0.55)), ${assetCssUrl(battlefield.asset)}`,
+                    backgroundSize: "cover",
+                    backgroundPosition: "center 46%",
+                    backgroundRepeat: "no-repeat",
+                  }
+            }
           >
             {!lite && (
               <>
@@ -415,8 +453,13 @@ export function CombatStage({
                 <i
                   key={`${cell.row}-${cell.column}`}
                   className={`${cell.row >= 4 ? "ally-cell" : "enemy-cell"} terrain-cell terrain-cell-${cell.kind} ${cell.walkable ? "is-walkable" : "is-blocked"}`}
+                  style={
+                    useArena
+                      ? { backgroundImage: `url('${assetUrl(arenaTileFor(theme, cell.kind))}')` }
+                      : undefined
+                  }
                 >
-                  {cell.kind !== "ground" && (
+                  {!useArena && cell.kind !== "ground" && (
                     <b>{COMBAT_TERRAIN_META[cell.kind].hanja}</b>
                   )}
                 </i>
@@ -429,8 +472,6 @@ export function CombatStage({
             {state.units.map((unit) => {
               const hero = HERO_BY_ID[unit.heroId];
               const roleVisual = ROLE_ARCHETYPES[hero.role];
-              const dutyVisual = DUTY_PROFILES[unit.duty];
-              const traits = traitsForHero(hero);
               const identity = combatIdentityFor(hero.id, hero.role);
               const appearance = heroAppearanceFor(
                 hero.id,
@@ -471,6 +512,14 @@ export function CombatStage({
                   } as React.CSSProperties}
                   aria-label={`${unit.side === "ally" ? "아군" : "적군"} ${hero.name} 체력 ${Math.round(hp)}%${statusLabel ? `, ${statusLabel}` : ""}`}
                 >
+                  {useArena && (
+                    <ArenaToken
+                      hero={hero}
+                      star={unit.star}
+                      variant="combat"
+                      hpPercent={hp}
+                    />
+                  )}
                   <span className="combat-fighter" aria-hidden="true">
                     <i className="fighter-ground" />
                     {!lite && (
@@ -539,7 +588,6 @@ export function CombatStage({
                         <>
                           <i className="fighter-aura-disc" />
                           <i className="fighter-rank-halo" />
-                          <i className="fighter-banner"><b>{hero.faction}</b></i>
                         </>
                       )}
                     </span>
@@ -570,38 +618,9 @@ export function CombatStage({
                       <i />
                     </span>
                   )}
-                  {unit.terrainKind !== "ground" && (
-                    <span
-                      className={`combat-footing-badge footing-${unit.terrainKind}`}
-                      title={COMBAT_TERRAIN_META[unit.terrainKind].shortRule}
-                    >
-                      <i>{COMBAT_TERRAIN_META[unit.terrainKind].hanja}</i>
-                      <b>{COMBAT_TERRAIN_META[unit.terrainKind].label}</b>
-                    </span>
-                  )}
-                  {!lite && (
-                    <>
-                      <span className="combat-role-crest" title={`${dutyVisual.label} · ${dutyVisual.description}`}>
-                        <i>{dutyVisual.glyph}</i>
-                        <b>{dutyVisual.short}</b>
-                      </span>
-                      <span className="trait-icons trait-icons-combat">
-                        {traits.slice(0, 3).map((trait) => (
-                          <i
-                            key={trait.id}
-                            title={trait.tip}
-                            style={{ "--trait-tone": trait.tone } as React.CSSProperties}
-                          >
-                            {trait.glyph}
-                          </i>
-                        ))}
-                      </span>
-                    </>
-                  )}
                   <span className="combat-unit-ring" />
                   <span className="combat-unit-name">
                     <b>{hero.name}</b>
-                    <small>{identity.weaponName} · {hero.skill}</small>
                   </span>
                   <span className="combat-hp">
                     <i style={{ width: `${hp}%` }} />

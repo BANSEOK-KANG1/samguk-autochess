@@ -48,9 +48,19 @@ import {
   COMBAT_TICK_MS,
   type CombatSpeed,
 } from "./combat-timing";
+import {
+  playSfx,
+  unlockSfx,
+  isSfxMuted,
+  toggleSfxMuted,
+  subscribeSfxMute,
+  setBgmDesired,
+} from "./sound";
 import { ModePanel } from "./mode-panel";
 import { heroPortraitStyle } from "./hero-portrait";
 import { heroCombatArtStyle } from "./hero-combat-art";
+import { ArenaToken } from "./arena-board";
+import { isArenaTheme, arenaTileFor, arenaDecorFor } from "./arena-maps";
 import { heroAppearanceFor } from "./hero-appearance";
 import { combatIdentityFor } from "./hero-combat-identity";
 import { dutyProfileFor } from "./combat-duty";
@@ -60,7 +70,7 @@ import {
   COMBAT_TERRAIN_META,
   combatTerrainCellAt,
 } from "./combat-terrain";
-import { assetCssUrl } from "./asset-url";
+import { assetCssUrl, assetUrl } from "./asset-url";
 import {
   ITEM_BY_ID,
   ITEM_KIND_LABEL,
@@ -72,6 +82,7 @@ import {
   tryCombineItems,
   type EquippedItems,
 } from "./item-data";
+import { ItemIcon } from "./item-icon";
 import {
   BOARD_COLUMNS,
   BOARD_POSITIONS,
@@ -90,6 +101,8 @@ import {
   humanPlayer,
   loadMatch,
   mergeRoster,
+  LOOT_SHOP_FREE_REROLLS,
+  REROLL_COST,
   opponentForHuman,
   practiceEnemyMeta,
   rollShop,
@@ -102,9 +115,31 @@ import {
   type Unit,
 } from "./session";
 
+const INTRO_SCENES = [
+  {
+    id: "guan-yu",
+    src: "ultimate-scenes/guan-yu-ultimate-v22.webp",
+    label: "관우",
+  },
+  {
+    id: "cao-cao",
+    src: "ultimate-scenes/cao-cao-ultimate-v22.webp",
+    label: "조조",
+  },
+  {
+    id: "zhou-yu",
+    src: "ultimate-scenes/zhou-yu-ultimate-v22.webp",
+    label: "주유",
+  },
+] as const;
+
 type Zone = "board" | "bench";
 type Selection = { zone: Zone; index: number } | null;
 type ShopKind = "heroes" | "items";
+type DragOverTarget =
+  | { zone: Zone; index: number }
+  | { zone: "sell" };
+type PlacementVerdict = "valid" | "swap" | "blocked" | "full" | "self";
 
 const turnIndexFor = (round: number, stage: number) =>
   (round - 1) * 5 + stage;
@@ -233,15 +268,21 @@ function UnitPiece({
   piece,
   theme,
   selected,
+  dragging = false,
+  tokenized = false,
   onClick,
   onDragStart,
+  onDragEnd,
   variant = "board",
 }: {
   piece: Unit;
   theme: BattlefieldTheme;
   selected: boolean;
+  dragging?: boolean;
+  tokenized?: boolean;
   onClick: () => void;
   onDragStart: (event: React.DragEvent) => void;
+  onDragEnd?: () => void;
   variant?: "board" | "bench";
 }) {
   const hero = HERO_BY_ID[piece.heroId];
@@ -251,14 +292,38 @@ function UnitPiece({
   const terrainReady = hero.affinity.includes(theme);
   const traits = traitsForHero(hero);
 
+  if (tokenized && variant === "board") {
+    return (
+      <button
+        className={`arena-token-piece unit-star-${piece.star} ${selected ? "selected" : ""} ${dragging ? "is-dragging" : ""} ${terrainReady ? "terrain-ready" : ""}`}
+        onClick={onClick}
+        draggable
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        title={`${hero.name} · ${hero.skill} · ${identity.weaponName}`}
+        aria-label={`${hero.name} ${piece.star}성 배치`}
+      >
+        <ArenaToken hero={hero} star={piece.star} variant="prep" />
+        {(piece.items[0] || piece.items[1]) && (
+          <span className="arena-token-items" aria-hidden="true">
+            {piece.items.filter(Boolean).map((itemId) => (
+              <i key={itemId}>{ITEM_BY_ID[itemId!]?.glyph ?? "템"}</i>
+            ))}
+          </span>
+        )}
+      </button>
+    );
+  }
+
   if (variant === "bench") {
     return (
       <button
-        className={`unit-piece unit-card-compact unit-star-${piece.star} ${selected ? "selected" : ""}`}
+        className={`unit-piece unit-card-compact unit-star-${piece.star} ${selected ? "selected" : ""} ${dragging ? "is-dragging" : ""}`}
         style={{ "--faction": FACTION_COLOR[hero.faction] } as React.CSSProperties}
         onClick={onClick}
         draggable
         onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
         title={`${hero.name} · ${hero.skill}`}
       >
         <span className="unit-portrait" style={heroPortraitStyle(hero)} />
@@ -286,7 +351,7 @@ function UnitPiece({
 
   return (
     <button
-      className={`board-figurine unit-star-${piece.star} role-${hero.role} weapon-${identity.weapon} ${selected ? "selected" : ""} ${terrainReady ? "terrain-ready" : ""}`}
+      className={`board-figurine unit-star-${piece.star} role-${hero.role} weapon-${identity.weapon} ${selected ? "selected" : ""} ${dragging ? "is-dragging" : ""} ${terrainReady ? "terrain-ready" : ""}`}
       style={
         {
           "--faction": FACTION_COLOR[hero.faction],
@@ -299,6 +364,7 @@ function UnitPiece({
       onClick={onClick}
       draggable
       onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
       title={`${hero.name} · ${hero.skill} · ${identity.weaponName}`}
       aria-label={`${hero.name} ${piece.star}성 배치`}
     >
@@ -335,6 +401,31 @@ function UnitPiece({
         <small>{dutyProfileFor(hero).short}</small>
       </span>
     </button>
+  );
+}
+
+function PlacementGhost({
+  piece,
+  tokenized = false,
+}: {
+  piece: Unit;
+  tokenized?: boolean;
+}) {
+  const hero = HERO_BY_ID[piece.heroId];
+  if (tokenized) {
+    return (
+      <span className="placement-ghost is-token" aria-hidden="true">
+        <span className="placement-ghost-pad" />
+        <ArenaToken hero={hero} star={piece.star} variant="prep" />
+      </span>
+    );
+  }
+  return (
+    <span className="placement-ghost" aria-hidden="true">
+      <span className="placement-ghost-pad" />
+      <span className="placement-ghost-body" style={heroCombatArtStyle(hero)} />
+      <strong>{hero.name}</strong>
+    </span>
   );
 }
 
@@ -386,14 +477,14 @@ function ItemShopCard({
       style={{ "--item-accent": item.accent } as React.CSSProperties}
       onClick={onBuy}
     >
-      <span className="item-glyph-plate" aria-hidden="true">
-        <b>{item.glyph}</b>
+      <span className="item-art" aria-hidden="true">
+        <ItemIcon kind={item.kind} slot={item.slot} accent={item.accent} size={48} />
         <i>{ITEM_KIND_LABEL[item.kind]}</i>
       </span>
-      <span className="shop-info">
+      <span className="item-body">
         <strong>{item.name}</strong>
         <small>
-          {ITEM_SLOT_LABEL[item.slot]} · {ITEM_KIND_LABEL[item.kind]} ·{" "}
+          {ITEM_SLOT_LABEL[item.slot]} ·{" "}
           {item.tier === "component" ? "조합" : "완성"}
         </small>
         <em>{item.blurb}</em>
@@ -421,7 +512,11 @@ export default function Home() {
     rollItemShop(42),
   );
   const [itemBag, setItemBag] = useState<string[]>([]);
+  const [freeRerolls, setFreeRerolls] = useState(0);
   const [selection, setSelection] = useState<Selection>(null);
+  const [dragOver, setDragOver] = useState<DragOverTarget | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [placeFlash, setPlaceFlash] = useState<number | null>(null);
   const [gold, setGold] = useState(10);
   const [health, setHealth] = useState(100);
   const [level, setLevel] = useState(1);
@@ -442,19 +537,22 @@ export default function Home() {
   const [catalogFaction, setCatalogFaction] = useState<Faction | "전체">("전체");
   const [search, setSearch] = useState("");
   const [notice, setNotice] = useState(
-    "싱글 캠페인 · AI 라이벌과 대진하며 최후까지 남으세요.",
+    "난세 원정 · 맞수들과 겨뤄 최후까지 남으세요.",
   );
   const [battle, setBattle] = useState<BattleState | null>(null);
   const [battleResult, setBattleResult] = useState<CombatWinner | null>(null);
   const [speed, setSpeed] = useState<CombatSpeed>(1);
   const [introOpen, setIntroOpen] = useState(true);
+  const [introScene, setIntroScene] = useState(0);
   const [savedAvailable, setSavedAvailable] = useState(false);
+  const [sfxMuted, setSfxMutedState] = useState(isSfxMuted);
   const currentTheme = BATTLEFIELD_BY_ID[theme];
   const currentFormation = FORMATIONS[formation];
   const boardCount = board.filter(Boolean).length;
   const formationCount = formationActiveCount(board, formation);
   const formationTier = formationTierForCount(formation, formationCount);
   const combat = Boolean(battle);
+  const useArena = isArenaTheme(theme);
   const scout = opponentForHuman(match);
   const campaignMode = mode === "single" || mode === "versus";
   const encounter = currentEncounterRule(match);
@@ -467,6 +565,7 @@ export default function Home() {
     setShopKind(human.shopKind);
     setItemShop(human.itemShop);
     setItemBag(human.itemBag);
+    setFreeRerolls(human.freeRerolls);
     setGold(human.gold);
     setHealth(human.health);
     setLevel(human.level);
@@ -502,6 +601,7 @@ export default function Home() {
         shopKind,
         itemShop,
         itemBag,
+        freeRerolls,
         gold,
         health,
         level,
@@ -514,6 +614,8 @@ export default function Home() {
     );
 
   const startNewMatch = (nextMode: GameMode, rivals: AiRivalCount = aiCount) => {
+    void unlockSfx();
+    playSfx("ui");
     clearMatchSave();
     const created = createMatchState({
       mode: nextMode,
@@ -521,7 +623,8 @@ export default function Home() {
       aiCount: nextMode === "practice" ? 1 : rivals,
       tactic,
       formation,
-      theme: "평지",
+      // 연습 전투는 Kenney 사막 타일맵 프로토타입에서 바로 시작한다.
+      theme: nextMode === "practice" ? "사막" : "평지",
       seed: Date.now() % 1_000_000_000,
       rankPoints,
     });
@@ -534,11 +637,13 @@ export default function Home() {
   };
 
   const continueMatch = () => {
+    void unlockSfx();
     const saved = loadMatch();
     if (!saved) {
-      setNotice("저장된 캠페인이 없습니다.");
+      setNotice("이어서 할 원정이 없습니다.");
       return;
     }
+    playSfx("ui");
     applyHumanSnapshot(saved.match);
     setBattle(null);
     setBattleResult(null);
@@ -548,6 +653,40 @@ export default function Home() {
   useEffect(() => {
     setSavedAvailable(hasMatchSave());
   }, []);
+
+  useEffect(() => subscribeSfxMute(setSfxMutedState), []);
+
+  useEffect(() => {
+    if (!introOpen) return;
+    const timer = window.setInterval(() => {
+      setIntroScene((current) => (current + 1) % INTRO_SCENES.length);
+    }, 7200);
+    return () => window.clearInterval(timer);
+  }, [introOpen]);
+
+  useEffect(() => {
+    setBgmDesired(introOpen);
+    return () => setBgmDesired(false);
+  }, [introOpen]);
+
+  useEffect(() => {
+    if (!selection) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setSelection(null);
+        setDragOver(null);
+        setIsDragging(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [selection]);
+
+  useEffect(() => {
+    if (placeFlash === null) return;
+    const timer = window.setTimeout(() => setPlaceFlash(null), 420);
+    return () => window.clearTimeout(timer);
+  }, [placeFlash]);
 
   useEffect(() => {
     if (!combat) return;
@@ -583,6 +722,7 @@ export default function Home() {
     const winner = battle.winner;
     resultTimer.current = window.setTimeout(() => {
       setBattleResult(winner);
+      playSfx(winner === "ally" ? "win" : winner === "draw" ? "ui" : "lose");
       resultTimer.current = window.setTimeout(() => {
         if (campaignMode) {
           const synced = syncHumanIntoMatch();
@@ -627,9 +767,11 @@ export default function Home() {
             if (isItemShopTurn(upcomingRound, upcomingStage)) {
               setShopKind("items");
               setItemShop(rollItemShop(Date.now() + upcomingRound * 97));
+              setFreeRerolls(LOOT_SHOP_FREE_REROLLS);
             } else {
               setShopKind("heroes");
               setShop(rollShop(level, Date.now() + upcomingRound));
+              setFreeRerolls(0);
             }
           }
           setNotice(
@@ -647,7 +789,7 @@ export default function Home() {
         resultTimer.current = null;
       }, 2100);
     }, 0);
-  }, [battle, battleResult, campaignMode, difficulty, gold, level, locked, match, mode, round, stage, streak, theme, board, bench, shop, shopKind, itemShop, itemBag, health, xp, tactic, formation, aiCount, rankPoints]);
+  }, [battle, battleResult, campaignMode, difficulty, gold, level, locked, match, mode, round, stage, streak, theme, board, bench, shop, shopKind, itemShop, itemBag, freeRerolls, health, xp, tactic, formation, aiCount, rankPoints]);
 
   useEffect(
     () => () => {
@@ -698,34 +840,58 @@ export default function Home() {
   const selectedHero = selectedPiece
     ? HERO_BY_ID[selectedPiece.heroId]
     : undefined;
+  const placingActive = Boolean(selection && selectedPiece);
+  const sellValue =
+    selectedHero && selectedPiece
+      ? selectedHero.cost *
+        (selectedPiece.star === 1 ? 1 : selectedPiece.star === 2 ? 3 : 9)
+      : 0;
 
-  const relocateUnit = (
+  const placementVerdict = (
     source: Exclude<Selection, null>,
     targetZone: Zone,
     targetIndex: number,
-  ) => {
+  ): PlacementVerdict => {
+    if (source.zone === targetZone && source.index === targetIndex) return "self";
+    if (targetZone === "board" && !prepTerrainFor(theme, targetIndex).walkable) {
+      return "blocked";
+    }
     const targetRoster = targetZone === "board" ? board : bench;
     const targetPiece = targetRoster[targetIndex];
-    if (source.zone === targetZone && source.index === targetIndex) {
-      setSelection(null);
-      return;
-    }
-    if (
-      targetZone === "board" &&
-      !prepTerrainFor(theme, targetIndex).walkable
-    ) {
-      const blocked = prepTerrainFor(theme, targetIndex);
-      setNotice(
-        `${COMBAT_TERRAIN_META[blocked.kind].label}에는 배치할 수 없습니다. 길로만 이동·배치하세요.`,
-      );
-      return;
-    }
     if (
       targetZone === "board" &&
       source.zone === "bench" &&
       !targetPiece &&
       boardCount >= level
     ) {
+      return "full";
+    }
+    if (targetPiece) return "swap";
+    return "valid";
+  };
+
+  const relocateUnit = (
+    source: Exclude<Selection, null>,
+    targetZone: Zone,
+    targetIndex: number,
+  ) => {
+    const verdict = placementVerdict(source, targetZone, targetIndex);
+    if (verdict === "self") {
+      setSelection(null);
+      setDragOver(null);
+      setIsDragging(false);
+      return;
+    }
+    if (verdict === "blocked") {
+      const blocked = prepTerrainFor(theme, targetIndex);
+      playSfx("ui");
+      setNotice(
+        `${COMBAT_TERRAIN_META[blocked.kind].label}에는 배치할 수 없습니다. 길로만 이동·배치하세요.`,
+      );
+      return;
+    }
+    if (verdict === "full") {
+      playSfx("ui");
       setNotice(`출전 한도 ${level}명입니다. 레벨을 올리거나 장수를 교체하세요.`);
       return;
     }
@@ -739,8 +905,16 @@ export default function Home() {
     setBoard(nextBoard);
     setBench(nextBench);
     setSelection(null);
+    setDragOver(null);
+    setIsDragging(false);
     if (sourcePiece) {
-      setNotice(`${HERO_BY_ID[sourcePiece.heroId].name} 배치를 변경했습니다.`);
+      playSfx(verdict === "swap" ? "equip" : "buy");
+      if (targetZone === "board") setPlaceFlash(targetIndex);
+      setNotice(
+        verdict === "swap"
+          ? `${HERO_BY_ID[sourcePiece.heroId].name}과 자리를 바꿨습니다.`
+          : `${HERO_BY_ID[sourcePiece.heroId].name} 배치를 변경했습니다.`,
+      );
     }
   };
 
@@ -748,7 +922,10 @@ export default function Home() {
     const targetRoster = targetZone === "board" ? board : bench;
     const targetPiece = targetRoster[targetIndex];
     if (!selection) {
-      if (targetPiece) setSelection({ zone: targetZone, index: targetIndex });
+      if (targetPiece) {
+        playSfx("ui");
+        setSelection({ zone: targetZone, index: targetIndex });
+      }
       return;
     }
     relocateUnit(selection, targetZone, targetIndex);
@@ -760,7 +937,20 @@ export default function Home() {
     index: number,
   ) => {
     event.dataTransfer.setData("text/plain", `${zone}:${index}`);
+    event.dataTransfer.effectAllowed = "move";
+    try {
+      event.dataTransfer.setDragImage(event.currentTarget, 36, 48);
+    } catch {
+      /* some browsers reject custom drag images */
+    }
     setSelection({ zone, index });
+    setIsDragging(true);
+    playSfx("ui");
+  };
+
+  const dragEnd = () => {
+    setIsDragging(false);
+    setDragOver(null);
   };
 
   const dropUnit = (
@@ -772,8 +962,35 @@ export default function Home() {
     const [zone, index] = event.dataTransfer.getData("text/plain").split(":");
     if ((zone === "board" || zone === "bench") && Number.isFinite(Number(index))) {
       relocateUnit({ zone, index: Number(index) }, targetZone, targetIndex);
+    } else {
+      setIsDragging(false);
+      setDragOver(null);
     }
   };
+
+  const sellSelected = () => {
+    if (!selection || !selectedPiece || !selectedHero) return;
+    const nextBoard = [...board];
+    const nextBench = [...bench];
+    (selection.zone === "board" ? nextBoard : nextBench)[selection.index] = null;
+    const value = sellValue;
+    const returned = selectedPiece.items.filter(Boolean) as string[];
+    setBoard(nextBoard);
+    setBench(nextBench);
+    if (returned.length) setItemBag((bag) => [...bag, ...returned]);
+    setGold((current) => current + value);
+    setSelection(null);
+    setDragOver(null);
+    setIsDragging(false);
+    playSfx("reroll");
+    setNotice(`${selectedHero.name}을 보내고 금화 ${value}를 회수했습니다.`);
+  };
+
+  const placementCoach = placingActive && selectedHero
+    ? isDragging
+      ? `${selectedHero.name} 배치 중 · 빛나는 칸에 놓거나, 다른 장수 위로 올려 교체하세요`
+      : `${selectedHero.name} 선택 · 빈 칸 클릭/드래그로 배치 · Esc로 취소`
+    : `대기석에서 전장으로 올리세요 · 진법 칸이 더 밝게 빛납니다 · 출전 ${boardCount}/${level}`;
 
   const buyHero = (shopIndex: number) => {
     const heroId = shop[shopIndex];
@@ -805,6 +1022,7 @@ export default function Home() {
     setShop((current) =>
       current.map((item, index) => (index === shopIndex ? null : item)),
     );
+    playSfx(merged.mergedName ? "merge" : "buy");
     setNotice(
       merged.mergedName
         ? `${merged.mergedName} 승급 완료!`
@@ -826,6 +1044,7 @@ export default function Home() {
     setItemShop((current) =>
       current.map((entry, index) => (index === shopIndex ? null : entry)),
     );
+    playSfx("buy");
     setNotice(
       `${item.name}을 가방에 넣었습니다. 장수를 선택한 뒤 장착하세요.`,
     );
@@ -867,6 +1086,7 @@ export default function Home() {
     setBoard(nextBoard);
     setBench(nextBench);
     setItemBag((bag) => bag.filter((_, index) => index !== bagIndex));
+    playSfx(noticeText.includes("조합") ? "merge" : "equip");
     setNotice(noticeText);
   };
 
@@ -887,14 +1107,24 @@ export default function Home() {
   };
 
   const reroll = () => {
-    if (gold < 2) return setNotice("새로고침에는 금화 2가 필요합니다.");
-    setGold((value) => value - 2);
+    const isFree = freeRerolls > 0;
+    if (!isFree && gold < REROLL_COST) {
+      return setNotice(`새로고침에는 금화 ${REROLL_COST}가 필요합니다.`);
+    }
+    if (isFree) {
+      setFreeRerolls((value) => value - 1);
+    } else {
+      setGold((value) => value - REROLL_COST);
+    }
+    const suffix = isFree ? " (무료)" : ` (금화 ${REROLL_COST})`;
     if (shopKind === "items") {
       setItemShop(rollItemShop(Date.now()));
-      setNotice("아이템 상점 후보를 새로 불러왔습니다.");
+      playSfx("reroll");
+      setNotice(`전리품 후보를 새로 불러왔습니다.${suffix}`);
     } else {
       setShop(rollShop(level, Date.now()));
-      setNotice("장수 영입 후보를 새로 불러왔습니다.");
+      playSfx("reroll");
+      setNotice(`장수 영입 후보를 새로 불러왔습니다.${suffix}`);
     }
   };
 
@@ -914,28 +1144,15 @@ export default function Home() {
     }
   };
 
-  const sellSelected = () => {
-    if (!selection || !selectedPiece || !selectedHero) return;
-    const nextBoard = [...board];
-    const nextBench = [...bench];
-    (selection.zone === "board" ? nextBoard : nextBench)[selection.index] = null;
-    const value = selectedHero.cost * (selectedPiece.star === 1 ? 1 : selectedPiece.star === 2 ? 3 : 9);
-    const returned = selectedPiece.items.filter(Boolean) as string[];
-    setBoard(nextBoard);
-    setBench(nextBench);
-    if (returned.length) setItemBag((bag) => [...bag, ...returned]);
-    setGold((current) => current + value);
-    setSelection(null);
-    setNotice(`${selectedHero.name}을 보내고 금화 ${value}를 회수했습니다.`);
-  };
-
   const startBattle = () => {
     if (!boardCount) return setNotice("전장에 장수를 먼저 배치하세요.");
     if (campaignMode && match.phase === "finished") {
-      setNotice("캠페인이 끝났습니다. 인트로에서 새 게임을 시작하세요.");
+      setNotice("원정이 끝났습니다. 처음부터 다시 시작해 보세요.");
       setIntroOpen(true);
       return;
     }
+    void unlockSfx();
+    playSfx("battle");
     const allies = boardToCombatInputs(board);
     if (allies.length !== boardCount) {
       setNotice("배치 인원과 출전 명단이 일치하지 않습니다. 다시 배치해 주세요.");
@@ -997,14 +1214,17 @@ export default function Home() {
       }
       setNotice(
         combatEncounter.kind === "farm"
-          ? `${combatEncounter.label} · 산적 ${enemyUnits.length}명 · 금화 ${combatEncounter.goldReward}${combatEncounter.itemDrops ? ` · 아이템 ${combatEncounter.itemDrops}개` : ""}`
-          : `${foe!.name}과 조합전 · 다른 AI 대진은 자동 처리됩니다`,
+          ? `${combatEncounter.label} · 산적 ${enemyUnits.length}명 · 금화 ${combatEncounter.goldReward}${combatEncounter.itemDrops ? ` · 전리품 ${combatEncounter.itemDrops}개` : ""}`
+          : `${foe!.name}과 군웅 격돌 · 다른 대진은 자동으로 진행됩니다`,
       );
       return;
     }
 
     const candidates = BATTLEFIELD_THEMES.filter((item) => item.id !== theme);
-    const nextTheme = candidates[Math.floor(Math.random() * candidates.length)].id;
+    // 사막 프로토타입일 때는 전투도 같은 타일맵/토큰 스타일을 유지한다.
+    const nextTheme = useArena
+      ? theme
+      : candidates[Math.floor(Math.random() * candidates.length)].id;
     const seed = Math.floor(Date.now() / 1000) + round * 137 + stage * 31;
     const meta = practiceEnemyMeta({ difficulty }, seed);
     setTheme(nextTheme);
@@ -1042,27 +1262,90 @@ export default function Home() {
       } as React.CSSProperties}
     >
       {introOpen && (
-        <div className="intro-screen" role="dialog" aria-label="게임 시작">
-          <span className="intro-emblem">삼</span>
-          <h1>삼국지 오토체스</h1>
-          <p>오프라인 싱글 캠페인 · AI 1~3명 · 최대 4석</p>
-          <div className="intro-actions">
-            {savedAvailable && (
-              <button className="intro-start" onClick={continueMatch}>
-                이어하기
-              </button>
-            )}
-            <button className="intro-start" onClick={() => startNewMatch("single", aiCount)}>
-              새 캠페인
-            </button>
-            <button className="intro-secondary" onClick={() => startNewMatch("practice", 1)}>
-              연습 전투
-            </button>
+        <div
+          className="intro-screen"
+          role="dialog"
+          aria-label="게임 시작"
+          onPointerDown={() => {
+            void unlockSfx();
+          }}
+        >
+          <div className="intro-stage" aria-hidden="true">
+            {INTRO_SCENES.map((scene, index) => (
+              <div
+                className={`intro-scene ${index === introScene ? "is-active" : ""}`}
+                key={scene.id}
+                style={{ backgroundImage: assetCssUrl(scene.src) }}
+              />
+            ))}
+            <div className="intro-veil" />
+            <div className="intro-embers" />
           </div>
-          <button className="intro-link" onClick={() => { setIntroOpen(false); setModeOpen(true); }}>
-            난이도 · AI 수 · 진법 설정
-          </button>
-          <span className="intro-version">PRE-ALPHA v0.2.2 · 전투 속도 상향</span>
+
+          <div className="intro-shell">
+            <header className="intro-brand">
+              <strong className="intro-title">삼국지 오토체스</strong>
+              <p>난세를 헤쳐, 최후까지 살아남으세요</p>
+            </header>
+
+            <div className={`intro-actions ${savedAvailable ? "has-continue" : ""}`}>
+              {savedAvailable && (
+                <button
+                  className="intro-card intro-card--continue"
+                  onClick={continueMatch}
+                >
+                  <small>저장된 원정</small>
+                  <strong>이어하기</strong>
+                  <span>떠난 막사에서 다시 출진합니다</span>
+                </button>
+              )}
+              <button
+                className="intro-card intro-card--primary"
+                onClick={() => startNewMatch("single", aiCount)}
+              >
+                <small>본 게임 · {GAME_MODES.single.estimatedMinutes}</small>
+                <strong>새 원정</strong>
+                <span>{GAME_MODES.single.description}</span>
+              </button>
+              <button
+                className="intro-card intro-card--secondary"
+                onClick={() => startNewMatch("practice", 1)}
+              >
+                <small>가볍게 · {GAME_MODES.practice.estimatedMinutes}</small>
+                <strong>연습 전투</strong>
+                <span>{GAME_MODES.practice.description}</span>
+              </button>
+              <button
+                className="intro-card intro-card--ghost"
+                onClick={() => {
+                  void unlockSfx();
+                  playSfx("ui");
+                  setModeOpen(true);
+                }}
+              >
+                <small>사전 준비</small>
+                <strong>출진 설정</strong>
+                <span>난이도 · 맞수 수 · 진법 · 전술</span>
+              </button>
+            </div>
+
+            <footer className="intro-foot">
+              <button
+                className="intro-mute"
+                onClick={() => {
+                  void unlockSfx();
+                  toggleSfxMuted();
+                }}
+                aria-label={sfxMuted ? "소리 켜기" : "소리 끄기"}
+              >
+                {sfxMuted ? "음소거" : "브금·효과음"}
+              </button>
+              <span className="intro-version">PRE-ALPHA v0.2.3</span>
+              <span className="intro-scene-label" aria-hidden="true">
+                {INTRO_SCENES[introScene]?.label}
+              </span>
+            </footer>
+          </div>
         </div>
       )}
       <div className="ink-map" aria-hidden="true" />
@@ -1080,6 +1363,16 @@ export default function Home() {
             <span><i>연</i><small>연승</small><strong>{Math.max(0, streak)}</strong></span>
           </div>
           <nav className="top-actions">
+            <button
+              onClick={() => {
+                void unlockSfx();
+                toggleSfxMuted();
+              }}
+              aria-label={sfxMuted ? "효과음 켜기" : "효과음 끄기"}
+              title={sfxMuted ? "효과음 켜기" : "효과음 끄기"}
+            >
+              {sfxMuted ? "음소거" : "소리"}
+            </button>
             <button onClick={() => setArtLabOpen(true)}>3D 아트</button>
             <button onClick={() => setModeOpen(true)}>게임 설정</button>
             <button onClick={() => setCatalogOpen(true)}>장수록 <b>100</b></button>
@@ -1143,26 +1436,55 @@ export default function Home() {
               <span className="timer">배치 7×4 · 전투 7×8 · {boardCount}/{level}</span>
             </div>
             <div
-              className={`board prep-stage terrain-${currentTheme.slug}`}
+              className={`board prep-stage terrain-${currentTheme.slug} ${useArena ? "arena-desert" : ""} ${placingActive ? "is-placing" : ""} ${isDragging ? "is-dragging" : ""}`}
               style={{
                 "--terrain-image": assetCssUrl(currentTheme.asset),
                 "--terrain-accent": currentTheme.accent,
-                backgroundImage: `linear-gradient(180deg, rgba(6, 9, 8, 0.18), rgba(4, 6, 5, 0.55)), ${assetCssUrl(currentTheme.asset)}`,
-                backgroundSize: "cover",
-                backgroundPosition: "center 48%",
-                backgroundRepeat: "no-repeat",
+                backgroundImage: useArena
+                  ? undefined
+                  : `linear-gradient(180deg, rgba(6, 9, 8, 0.18), rgba(4, 6, 5, 0.55)), ${assetCssUrl(currentTheme.asset)}`,
+                backgroundSize: useArena ? undefined : "cover",
+                backgroundPosition: useArena ? undefined : "center 48%",
+                backgroundRepeat: useArena ? undefined : "no-repeat",
               } as React.CSSProperties}
             >
-              <div className="board-terrain-layer" aria-hidden="true" />
-              <div className="board-scenery" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+              {!useArena && <div className="board-terrain-layer" aria-hidden="true" />}
+              {!useArena && (
+                <div className="board-scenery" aria-hidden="true"><i /><i /><i /><i /><i /><i /><i /><i /></div>
+              )}
+              {useArena && (
+                <div className="arena-decor" aria-hidden="true">
+                  {arenaDecorFor(theme).map((decor, i) => (
+                    <img
+                      key={i}
+                      src={assetUrl(decor.src)}
+                      alt=""
+                      style={{
+                        left: `${decor.x * 100}%`,
+                        top: `${decor.y * 100}%`,
+                        width: `${decor.size}px`,
+                        transform: `translate(-50%, -50%) scaleX(${decor.flip ? -1 : 1})`,
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="placement-lane-wash" aria-hidden="true">
+                <span>전열</span>
+                <span>후열</span>
+              </div>
               <div className="enemy-direction"><span>▲ 적 진영 (상단)</span><small>전투는 7×8 위아래 교전 · 배치칸은 아군 하단 7×4</small></div>
+              <div className="placement-coach" role="status">
+                <b>{placingActive ? "배치" : "준비"}</b>
+                <span>{placementCoach}</span>
+              </div>
               <button
                 className="formation-command"
                 style={{ "--formation": currentFormation.color } as React.CSSProperties}
                 onClick={() => setModeOpen(true)}
               >
                 <i>{currentFormation.label.slice(0, 1)}</i>
-                <span><small>출전 진법</small><strong>{currentFormation.label}</strong><em>{formationCount}명 · {formationTier}단계</em></span>
+                <span><small>진법</small><strong>{currentFormation.label}</strong><em>{formationCount}명 · {formationTier}단계</em></span>
                 <b>변경</b>
               </button>
               <div className="rank-labels">
@@ -1173,17 +1495,67 @@ export default function Home() {
                 const formationCell = currentFormation.cells.includes(index);
                 const coreCell = currentFormation.coreCells.includes(index);
                 const terrainCell = prepTerrainFor(theme, index);
+                const verdict =
+                  selection && selectedPiece
+                    ? placementVerdict(selection, "board", index)
+                    : null;
+                const isHover =
+                  dragOver?.zone === "board" && dragOver.index === index;
+                const ghostVisible =
+                  placingActive &&
+                  selectedPiece &&
+                  !piece &&
+                  verdict === "valid" &&
+                  isHover;
                 return (
                   <div
-                    className={`board-slot terrain-pad terrain-pad-${terrainCell.kind} ${piece ? "occupied" : ""} ${formationCell ? "formation-cell" : ""} ${coreCell ? "formation-core-cell" : ""} ${terrainCell.walkable ? "is-walkable" : "is-blocked"}`}
+                    className={[
+                      "board-slot",
+                      "terrain-pad",
+                      `terrain-pad-${terrainCell.kind}`,
+                      piece ? "occupied" : "",
+                      formationCell ? "formation-cell" : "",
+                      coreCell ? "formation-core-cell" : "",
+                      terrainCell.walkable ? "is-walkable" : "is-blocked",
+                      verdict ? `drop-${verdict}` : "",
+                      isHover ? "is-drag-over" : "",
+                      placeFlash === index ? "just-placed" : "",
+                      row <= 1 ? "lane-front" : "lane-back",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                     data-row={row}
                     data-column={index % BOARD_COLUMNS}
                     key={index}
                     style={formationCell ? { "--formation": currentFormation.color } as React.CSSProperties : undefined}
-                    onDragOver={(event) => event.preventDefault()}
+                    onDragOver={(event) => {
+                      event.preventDefault();
+                      event.dataTransfer.dropEffect = "move";
+                      setDragOver({ zone: "board", index });
+                    }}
+                    onPointerEnter={() => {
+                      if (placingActive) setDragOver({ zone: "board", index });
+                    }}
+                    onPointerLeave={() => {
+                      if (isDragging) return;
+                      setDragOver((current) =>
+                        current?.zone === "board" && current.index === index
+                          ? null
+                          : current,
+                      );
+                    }}
                     onDrop={(event) => dropUnit(event, "board", index)}
                     title={`${COMBAT_TERRAIN_META[terrainCell.kind].label} · ${COMBAT_TERRAIN_META[terrainCell.kind].shortRule}`}
                   >
+                    {useArena && (
+                      <img
+                        className="arena-tile"
+                        src={assetUrl(arenaTileFor(theme, terrainCell.kind))}
+                        alt=""
+                        aria-hidden="true"
+                        draggable={false}
+                      />
+                    )}
                     <span className="slot-mark">{formationCell ? currentFormation.label.slice(0, 1) : RANKS[row].mark}</span>
                     {coreCell && <span className="formation-core-mark">핵</span>}
                     {terrainCell.kind !== "ground" && (
@@ -1192,25 +1564,36 @@ export default function Home() {
                         <b>{COMBAT_TERRAIN_META[terrainCell.kind].label}</b>
                       </span>
                     )}
+                    {verdict === "swap" && isHover && piece && (
+                      <span className="swap-badge">교체</span>
+                    )}
+                    {ghostVisible && selectedPiece && (
+                      <PlacementGhost piece={selectedPiece} tokenized={useArena} />
+                    )}
                     {piece ? (
                       <UnitPiece
                         piece={piece}
                         theme={theme}
                         variant="board"
+                        tokenized={useArena}
                         selected={selection?.zone === "board" && selection.index === index}
+                        dragging={isDragging && selection?.zone === "board" && selection.index === index}
                         onClick={() => moveUnit("board", index)}
                         onDragStart={(event) => dragStart(event, "board", index)}
+                        onDragEnd={dragEnd}
                       />
                     ) : (
                       <button
-                        className={`empty-slot ${terrainCell.walkable ? "" : "empty-slot-blocked"}`}
+                        className={`empty-slot ${terrainCell.walkable ? "" : "empty-slot-blocked"} ${verdict === "valid" ? "is-droppable" : ""}`}
                         onClick={() => moveUnit("board", index)}
                         disabled={!terrainCell.walkable && !selection}
                       >
                         {terrainCell.walkable
                           ? formationCell
                             ? currentFormation.label.slice(0, 1)
-                            : "+"
+                            : placingActive && verdict === "valid"
+                              ? "↓"
+                              : "+"
                           : COMBAT_TERRAIN_META[terrainCell.kind].label.slice(0, 1)}
                       </button>
                     )}
@@ -1219,46 +1602,98 @@ export default function Home() {
               })}
               <div className="battle-wash" />
             </div>
-            <div className="bench-wrap">
-              <div className="bench-title"><span>대기석 · 카드</span><small>상점 영입 카드 · 전장에 올려 2.5D로 배치</small></div>
+            <div className={`bench-wrap ${placingActive ? "is-placing" : ""}`}>
+              {(placingActive || isDragging) && selectedPiece && selectedHero && (
+                <div
+                  className={`placement-sell-tray ${dragOver?.zone === "sell" ? "is-hot" : ""}`}
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = "move";
+                    setDragOver({ zone: "sell" });
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault();
+                    sellSelected();
+                  }}
+                >
+                  <button type="button" onClick={sellSelected}>
+                    <small>장수 보내기</small>
+                    <strong>● {sellValue}</strong>
+                    <span>여기로 드래그하거나 클릭</span>
+                  </button>
+                </div>
+              )}
+              <div className="bench-title">
+                <span>대기석 · 카드</span>
+                <small>
+                  {placingActive
+                    ? "선택한 장수를 전장 칸으로 끌어 올리세요"
+                    : "상점에서 영입한 뒤 전장에 올려 배치"}
+                </small>
+              </div>
               <div className="bench">
-                {bench.map((piece, index) => (
-                  <div
-                    className={`bench-slot ${piece ? "occupied" : ""}`}
-                    key={index}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={(event) => dropUnit(event, "bench", index)}
-                  >
-                    {piece ? (
-                      <UnitPiece
-                        piece={piece}
-                        theme={theme}
-                        variant="bench"
-                        selected={selection?.zone === "bench" && selection.index === index}
-                        onClick={() => moveUnit("bench", index)}
-                        onDragStart={(event) => dragStart(event, "bench", index)}
-                      />
-                    ) : <button className="empty-slot" onClick={() => moveUnit("bench", index)}>{index + 1}</button>}
-                  </div>
-                ))}
+                {bench.map((piece, index) => {
+                  const verdict =
+                    selection && selectedPiece
+                      ? placementVerdict(selection, "bench", index)
+                      : null;
+                  const isHover =
+                    dragOver?.zone === "bench" && dragOver.index === index;
+                  return (
+                    <div
+                      className={[
+                        "bench-slot",
+                        piece ? "occupied" : "",
+                        verdict ? `drop-${verdict}` : "",
+                        isHover ? "is-drag-over" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                      key={index}
+                      onDragOver={(event) => {
+                        event.preventDefault();
+                        event.dataTransfer.dropEffect = "move";
+                        setDragOver({ zone: "bench", index });
+                      }}
+                      onDrop={(event) => dropUnit(event, "bench", index)}
+                    >
+                      {piece ? (
+                        <UnitPiece
+                          piece={piece}
+                          theme={theme}
+                          variant="bench"
+                          selected={selection?.zone === "bench" && selection.index === index}
+                          dragging={isDragging && selection?.zone === "bench" && selection.index === index}
+                          onClick={() => moveUnit("bench", index)}
+                          onDragStart={(event) => dragStart(event, "bench", index)}
+                          onDragEnd={dragEnd}
+                        />
+                      ) : (
+                        <button className="empty-slot" onClick={() => moveUnit("bench", index)}>
+                          {index + 1}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </section>
 
           <aside className="round-panel panel">
-            <div className="panel-heading"><span>{selectedHero ? "장수 상세" : "전장 상황"}</span><small className="ready">{campaignMode ? `${match.players.length}석` : "연습"}</small></div>
+            <div className="panel-heading"><span>{selectedHero ? "장수 상세" : "전장 상황"}</span><small className="ready">{campaignMode ? `${match.players.length}인` : "연습"}</small></div>
             {campaignMode && (
               <div className="match-standings">
                 <div className={`encounter-brief encounter-${encounter.kind}`}>
-                  <b>{encounter.kind === "farm" ? "파밍판" : "조합전"}</b>
+                  <b>{encounter.kind === "farm" ? "약탈전" : "군웅전"}</b>
                   <strong>{encounter.label}</strong>
                   <small>{encounter.subtitle}</small>
                   {encounter.kind === "farm" && (
                     <em>
                       보상 금화 {encounter.goldReward}
                       {encounter.itemDrops
-                        ? ` · 아이템 ${encounter.itemDrops}개`
-                        : " · 기본 장수 훈련"}
+                        ? ` · 전리품 ${encounter.itemDrops}개`
+                        : " · 병력 훈련"}
                     </em>
                   )}
                 </div>
@@ -1329,7 +1764,12 @@ export default function Home() {
                         >
                           {equipped ? (
                             <>
-                              <b className="equip-glyph">{equipped.glyph}</b>
+                              <ItemIcon
+                                kind={equipped.kind}
+                                slot={equipped.slot}
+                                accent={equipped.accent}
+                                size={22}
+                              />
                               <strong>{equipped.name}</strong>
                               <small>
                                 {ITEM_KIND_LABEL[equipped.kind]} ·{" "}
@@ -1361,7 +1801,14 @@ export default function Home() {
                               onClick={() => equipFromBag(index)}
                               title={item?.description}
                             >
-                              <b>{item?.glyph}</b>
+                              {item && (
+                                <ItemIcon
+                                  kind={item.kind}
+                                  slot={item.slot}
+                                  accent={item.accent}
+                                  size={18}
+                                />
+                              )}
                               <span>{item?.name}</span>
                             </button>
                           );
@@ -1391,7 +1838,7 @@ export default function Home() {
                 <p>예상 전력 {Math.round(820 * DIFFICULTIES[difficulty].enemyScale + round * 75)}</p>
                 <button className="opponent-plan-button" onClick={() => setModeOpen(true)}>
                   <i style={{ "--tactic": TACTICS[tactic].color } as React.CSSProperties}>{TACTICS[tactic].label.slice(0, 2)}</i>
-                  <span><small>출전 전술</small><b>{TACTICS[tactic].label}</b></span><em>변경</em>
+                  <span><small>전술</small><b>{TACTICS[tactic].label}</b></span><em>변경</em>
                 </button>
                 <ul className="terrain-rules">{currentTheme.ruleText.map((rule) => <li key={rule}>{rule}</li>)}</ul>
               </div>
@@ -1411,7 +1858,7 @@ export default function Home() {
             <div className="odds">{(SHOP_ODDS[level] ?? SHOP_ODDS[9]).map((odd, index) => <span className={`cost-${index + 1}`} key={index}>● {odd}%</span>)}</div>
             <div className="merge-rule"><b>◆ → ◆◆ → ◆◆◆</b><span>같은 성급 장수 3장 자동 승급</span></div>
             <div className="economy-actions">
-              <button onClick={reroll}><b>↻</b><span>새로고침<small>● 2</small></span></button>
+              <button className={freeRerolls > 0 ? "is-free" : ""} onClick={reroll}><b>↻</b><span>새로고침<small>{freeRerolls > 0 ? `무료 ${freeRerolls}회` : `● ${REROLL_COST}`}</small></span></button>
               <button onClick={buyXp}><b>+</b><span>경험치<small>● 4</small></span></button>
               <button className={locked ? "locked" : ""} onClick={() => setLocked((value) => !value)}><b>{locked ? "◆" : "◇"}</b><span>상점 잠금<small>{locked ? "유지 중" : "해제"}</small></span></button>
             </div>
@@ -1420,7 +1867,7 @@ export default function Home() {
             <div className="shop-title">
               <span>
                 {shopKind === "items"
-                  ? "아이템 상점 · 3턴마다"
+                  ? "전리품 상점 · 첫 새로고침 무료"
                   : "장수 영입 · 카드"}
               </span>
               <small>{notice}</small>
@@ -1449,9 +1896,24 @@ export default function Home() {
                   <button
                     className="bag-item"
                     key={`dock-${itemId}-${index}`}
+                    style={
+                      ITEM_BY_ID[itemId]
+                        ? ({ "--item-accent": ITEM_BY_ID[itemId].accent } as React.CSSProperties)
+                        : undefined
+                    }
                     onClick={() => equipFromBag(index)}
+                    title={ITEM_BY_ID[itemId]?.name}
                   >
-                    {ITEM_BY_ID[itemId]?.glyph ?? "템"}
+                    {ITEM_BY_ID[itemId] ? (
+                      <ItemIcon
+                        kind={ITEM_BY_ID[itemId].kind}
+                        slot={ITEM_BY_ID[itemId].slot}
+                        accent={ITEM_BY_ID[itemId].accent}
+                        size={18}
+                      />
+                    ) : (
+                      "템"
+                    )}
                   </button>
                 ))}
               </div>
@@ -1462,8 +1924,8 @@ export default function Home() {
               {encounter.number}전 · {encounter.label}<br />
               {campaignMode
                 ? encounter.kind === "farm"
-                  ? `산적 파밍 · 목표 레벨 ${encounter.targetLevel} · 금화 ${encounter.goldReward}`
-                  : `본격 조합전 · AI ${aiCount} · 보상 ×${DIFFICULTIES[difficulty].rewardMultiplier}`
+                  ? `약탈전 · 목표 레벨 ${encounter.targetLevel} · 금화 ${encounter.goldReward}`
+                  : `군웅전 · 맞수 ${aiCount} · 보상 ×${DIFFICULTIES[difficulty].rewardMultiplier}`
                 : "연습 전투 · 저장 없음"}
             </span>
             <button onClick={startBattle} disabled={combat || (campaignMode && match.phase === "finished")}><small>자동 전투</small>전투 시작</button>
@@ -1478,8 +1940,8 @@ export default function Home() {
           theme={battle.theme}
           opponent={
             encounter.kind === "farm"
-              ? "산적·황건 잔당"
-              : scout?.name ?? (mode === "practice" ? "연습 상대" : "AI 라이벌")
+              ? "산적·황건 무리"
+              : scout?.name ?? (mode === "practice" ? "연습 상대" : "맞수")
           }
           battleLabel={`${encounter.number}전 · ${encounter.label}`}
           speed={speed}

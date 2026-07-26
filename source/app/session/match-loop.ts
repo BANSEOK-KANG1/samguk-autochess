@@ -44,6 +44,11 @@ export const turnIndexFor = (round: number, stage: number) =>
 export const isItemShopTurn = (round: number, stage: number) =>
   turnIndexFor(round, stage) % 3 === 0;
 
+/** One free peek at the loot shop; further rerolls cost gold. */
+export const LOOT_SHOP_FREE_REROLLS = 1;
+
+export const REROLL_COST = 2;
+
 const interestGold = (gold: number) => Math.min(5, Math.floor(gold / 10));
 
 const streakBonus = (streak: number, won: boolean) =>
@@ -234,12 +239,14 @@ const refreshShops = (match: MatchState, players: PlayerState[]): PlayerState[] 
         ...player,
         shopKind: "items",
         itemShop: rollItemShop(match.seed + upcomingRound * 97 + index * 13),
+        freeRerolls: LOOT_SHOP_FREE_REROLLS,
       };
     }
     return {
       ...player,
       shopKind: "heroes",
       shop: rollShop(player.level, match.seed + upcomingRound * 53 + index * 19),
+      freeRerolls: 0,
     };
   });
 };
@@ -287,8 +294,8 @@ export const beginCombatRound = (match: MatchState): MatchState => {
     phase: "combat",
     notice:
       encounter.kind === "farm"
-        ? `${encounter.label} · 보상 금화 ${encounter.goldReward} · ${theme}`
-        : `${match.round}-${match.stage} 조합전 개시 · ${theme}`,
+        ? `${encounter.label} · 금화 ${encounter.goldReward} · ${theme}`
+        : `${encounter.label} · ${theme}`,
   };
 };
 
@@ -329,8 +336,8 @@ export const settleFarmRound = (
     lastResults: [],
     notice:
       humanWinner === "ally"
-        ? `${encounter.label} 완료 · 금화 ${payout}${drops.length ? ` · 아이템 ${drops.length}개` : ""} · 레벨 ${encounter.targetLevel}`
-        : `${encounter.label} 재정비 · 금화 ${payout} · 레벨 ${encounter.targetLevel}`,
+        ? `${encounter.label} 승리 · 금화 ${payout}${drops.length ? ` · 전리품 ${drops.length}개` : ""}`
+        : `${encounter.label} 패배 · 금화 ${payout}로 재정비`,
   };
   const refreshedPlayers = refreshShops(match, players);
   const nextState = { ...advancedBase, players: refreshedPlayers };
@@ -404,10 +411,10 @@ export const settleMatchRound = (
         ? `패배 · ${human.placement ?? survivors.length + 1}위`
         : `승리 · 최종 ${human.placement ?? 1}위`
       : humanWon
-        ? `승리 · 다음 ${nextRound}-${nextStage} 준비`
+        ? `승리 · 다음 전투 준비`
         : humanDraw
-          ? `무승부 · 다음 ${nextRound}-${nextStage} 준비`
-          : `패배 · 체력 ${human.health} · 다음 ${nextRound}-${nextStage}`,
+          ? `무승부 · 다음 전투 준비`
+          : `패배 · 체력 ${human.health} · 다음 전투`,
   };
   return advanced;
 };

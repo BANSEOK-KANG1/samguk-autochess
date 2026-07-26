@@ -153,6 +153,7 @@ const emptyPlayer = ({
   shopKind: "heroes",
   itemShop: rollItemShop(seed + 42),
   itemBag: [],
+  freeRerolls: 0,
   locked: false,
   tactic,
   formation,
@@ -214,7 +215,7 @@ export const createMatchState = ({
   }
 
   const match: MatchState = {
-    version: 2,
+    version: 3,
     mode,
     difficulty,
     aiCount,
@@ -228,7 +229,7 @@ export const createMatchState = ({
     lastResults: [],
     phase: "prep",
     rankPoints,
-    notice: `${DIFFICULTIES[difficulty].label} · AI ${aiCount}명 대결 · 약 15~25분`,
+    notice: `${DIFFICULTIES[difficulty].label} · 맞수 ${aiCount}명 · 약 15~25분`,
   };
   return {
     ...match,

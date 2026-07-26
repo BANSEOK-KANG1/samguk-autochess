@@ -45,13 +45,14 @@ export const encounterRuleFor = (
   const farmCycle = Math.max(0, Math.floor((number - 3) / 4));
 
   if (kind === "farm") {
+    const openingLabels = ["들판의 산적", "황건 잔당", "노상 도적"] as const;
     return {
       number,
       kind,
-      label: openingFarm ? `초반 파밍 ${number}/3` : "산적 토벌",
+      label: openingFarm ? openingLabels[number - 1]! : "산채 급습",
       subtitle: openingFarm
-        ? "산적·황건 잔당을 잡고 조합전 준비"
-        : "조합전 3회 뒤 보급을 챙기는 파밍판",
+        ? "소규모 무리를 쓸어 금화와 장수를 모은다"
+        : "한숨 돌리며 보급과 전리품을 챙긴다",
       targetLevel: openingFarm ? number + 1 : Math.min(9, 4 + farmCycle),
       enemyCount: openingFarm
         ? number
@@ -65,8 +66,8 @@ export const encounterRuleFor = (
   return {
     number,
     kind,
-    label: "라이벌 조합전",
-    subtitle: "진형·시너지·아이템을 갖춘 상대와 순위 경쟁",
+    label: "군웅 격돌",
+    subtitle: "진형을 맞추고, 상대 군세와 부딪친다",
     targetLevel: Math.min(9, 4 + Math.floor((number - 4) / 4)),
     enemyCount: 0,
     enemyScale: 1,
